@@ -1,0 +1,18 @@
+{
+  "name": "Катакомбы Культа",
+  "short_name": "Катакомбы",
+  "description": "Тактическая настольная игра в браузере.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#120e12",
+  "theme_color": "#120e12",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -78,6 +78,7 @@ const state = {
     const loadGameBtnEl = document.getElementById("loadGameBtn");
     const newGameBtnEl = document.getElementById("newGameBtn");
     const fullResetToggleEl = document.getElementById("fullResetToggle");
+    const installAppBtnEl = document.getElementById("installAppBtn");
     const activePlayerCardEl = document.getElementById("activePlayerCard");
     const playerStatsEl = document.getElementById("playerStats");
     const rollBtnEl = document.getElementById("rollBtn");
@@ -145,6 +146,7 @@ const state = {
     let lastSavedSnapshotJson = "";
     let lastStatsSignature = "";
     let lastInventorySignature = "";
+    let deferredInstallPrompt = null;
     const LOG_DOM_LIMIT = 200;
     const MAX_LOG_ENTRIES = Math.max(LOG_DOM_LIMIT, Number(CONFIG.MAX_LOG_ENTRIES) || 1500);
     const PERF_ENABLED = (() => {
@@ -293,6 +295,7 @@ const state = {
       if (playerNameEl) playerNameEl.setAttribute("placeholder", t("ui.playerNamePlaceholder"));
       if (settingsPanelEl) settingsPanelEl.setAttribute("aria-label", t("ui.settingsTitle"));
       if (settingsLauncherEl) settingsLauncherEl.setAttribute("aria-label", t("ui.settingsTitle"));
+      if (installAppBtnEl) installAppBtnEl.textContent = t("ui.installAppBtn");
       if (languageSelectEl) {
         languageSelectEl.value = currentLanguage;
         languageSelectEl.setAttribute("aria-label", t("app.languageLabel"));
@@ -358,6 +361,24 @@ const state = {
       sidePanelLeft = Boolean(nextValue);
       window.localStorage.setItem(SIDE_PANEL_LEFT_KEY, sidePanelLeft ? "1" : "0");
       syncSidePanelPosition();
+    }
+
+    function syncInstallButton() {
+      if (!installAppBtnEl) return;
+      installAppBtnEl.hidden = !deferredInstallPrompt;
+    }
+
+    async function promptInstallApp() {
+      if (!deferredInstallPrompt) return;
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      syncInstallButton();
+      promptEvent.prompt();
+      try {
+        await promptEvent.userChoice;
+      } catch (_) {
+        // No-op: the browser handles the result.
+      }
     }
 
     function beginPerf(name) {
@@ -3160,6 +3181,9 @@ const state = {
       if (settingsCloseBtnEl) {
         settingsCloseBtnEl.addEventListener("click", () => setSettingsPanelOpen(false));
       }
+      if (installAppBtnEl) {
+        installAppBtnEl.addEventListener("click", () => promptInstallApp());
+      }
       if (sidePanelToggleBtnEl) {
         sidePanelToggleBtnEl.addEventListener("click", () => setSidePanelLeft(!sidePanelLeft));
       }
@@ -3404,6 +3428,17 @@ const state = {
         });
         hideTileContextMenu();
       });
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        syncInstallButton();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        syncInstallButton();
+      });
     }
 
     function init() {
@@ -3411,6 +3446,7 @@ const state = {
       createBoard();
       bindEvents();
       syncSidePanelPosition();
+      syncInstallButton();
       applyStaticTranslations();
       setSettingsPanelOpen(false);
       closeLogPanel();
@@ -3420,6 +3456,14 @@ const state = {
       if (!loaded) {
         fullRender(false);
         logEvent("Game ready. Add players and start the run!");
+      }
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch((error) => {
+            console.debug("service worker registration failed", error);
+          });
+        });
       }
     }
 

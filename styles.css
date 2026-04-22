@@ -1304,6 +1304,12 @@
       width: 100%;
     }
 
+    .install-app-btn {
+      border-color: rgba(92, 200, 255, 0.28);
+      background: rgba(28, 39, 46, 0.9);
+      color: #eaf8ff;
+    }
+
     .reset-all-toggle {
       display: inline-flex;
       align-items: center;
