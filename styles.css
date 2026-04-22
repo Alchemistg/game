@@ -542,6 +542,12 @@
       letter-spacing: 0.4px;
     }
 
+    .victory-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     /* Player avatar in players list */
     .players-list-item .player-avatar {
       width: 28px;
@@ -1151,6 +1157,9 @@
       font-size: 0.82rem;
       line-height: 1.45;
       white-space: pre-wrap;
+      -webkit-user-select: text;
+      user-select: text;
+      cursor: text;
     }
 
     .toast-container {
@@ -1496,6 +1505,20 @@
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 6px;
+    }
+
+    .event-journal-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .event-journal-copy {
+      width: auto;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      white-space: nowrap;
     }
 
     .event-journal-title {

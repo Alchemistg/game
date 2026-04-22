@@ -187,6 +187,9 @@
   <section id="eventJournal" class="event-journal is-hidden" aria-label="Логи">
     <div class="event-journal-header">
       <div class="event-journal-title" data-i18n="eventJournal.title">Хроники ритуала</div>
+      <div class="event-journal-actions">
+        <button id="copyLogsBtn" class="event-journal-copy" type="button" data-i18n="eventJournal.copyBtn">Копировать</button>
+      </div>
     </div>
     <div class="event-journal-filter">
       <label for="logFilterSelect" data-i18n="eventJournal.filterLabel">Фильтр</label>
@@ -260,6 +263,9 @@
         <button id="closeVictoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть">×</button>
       </div>
       <div id="victoryBody" class="inventory-body"></div>
+      <div class="victory-actions">
+        <button id="victoryNewGameBtn" class="primary" type="button" data-i18n="ui.newGameBtn">Новая игра</button>
+      </div>
     </div>
   </div>
     <script src="localization.js"></script>

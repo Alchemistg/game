@@ -124,6 +124,7 @@ const state = {
     const toastContainerEl = document.getElementById("toastContainer");
     const eventJournalLauncherEl = document.getElementById("eventJournalLauncher");
     const eventJournalEl = document.getElementById("eventJournal");
+    const copyLogsBtnEl = document.getElementById("copyLogsBtn");
     const logFilterSelectEl = document.getElementById("logFilterSelect");
     const logBoxEl = document.getElementById("logBox");
     const playerNameEl = document.getElementById("playerName");
@@ -181,6 +182,7 @@ const state = {
     const victoryOverlayEl = document.getElementById("victoryOverlay");
     const victoryBodyEl = document.getElementById("victoryBody");
     const closeVictoryBtnEl = document.getElementById("closeVictoryBtn");
+    const victoryNewGameBtnEl = document.getElementById("victoryNewGameBtn");
     let autosaveTimer = null;
     let tileContextMode = "shop";
     let boardCellEls = [];
@@ -563,9 +565,10 @@ const state = {
     function syncSidePanelPosition() {
       document.body.classList.toggle("side-panel-left", sidePanelLeft);
       if (sidePanelToggleBtnEl) {
-        sidePanelToggleBtnEl.textContent = sidePanelLeft ? "→" : "←";
-        sidePanelToggleBtnEl.setAttribute("aria-label", sidePanelLeft ? "Перенести панель вправо" : "Перенести панель влево");
-        sidePanelToggleBtnEl.title = sidePanelLeft ? "Перенести панель вправо" : "Перенести панель влево";
+        const label = t(sidePanelLeft ? "ui.sidePanelToggleRight" : "ui.sidePanelToggleLeft");
+        sidePanelToggleBtnEl.textContent = label;
+        sidePanelToggleBtnEl.setAttribute("aria-label", label);
+        sidePanelToggleBtnEl.title = label;
         sidePanelToggleBtnEl.setAttribute("aria-pressed", sidePanelLeft ? "true" : "false");
       }
     }
@@ -735,6 +738,51 @@ const state = {
 
     function getSerializedLogText() {
       return state.logEntries.map((entry) => formatLogEntry(entry)).filter(Boolean).join("\n");
+    }
+
+    function getFilteredLogTextForCopy() {
+      const selectedFilter = state.logFilter || "all";
+      return state.logEntries
+        .filter((entry) => selectedFilter === "all" || entry.kind === selectedFilter)
+        .map((entry) => formatLogEntry(entry))
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+    }
+
+    async function copyTextToClipboard(text) {
+      const value = String(text || "").trim();
+      if (!value) return false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }
+      } catch (_) {
+        // fall through to legacy copy
+      }
+
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = value;
+        textArea.setAttribute("readonly", "true");
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.select();
+        const ok = document.execCommand("copy");
+        textArea.remove();
+        return Boolean(ok);
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async function copyVisibleLogsToClipboard() {
+      const text = getFilteredLogTextForCopy();
+      const ok = await copyTextToClipboard(text);
+      showLogToast(ok ? t("eventJournal.copyDone") : t("eventJournal.copyFailed"));
     }
 
     function renderLogWindow() {
@@ -1215,7 +1263,7 @@ const state = {
     }
 
     function ensureContextInitialized(mode) {
-      if (mode === "shop" && !contextInit.shop) {
+      if ((mode === "shop" || mode === "blackMarket") && !contextInit.shop) {
         renderShopMenuItems();
       }
       if (mode && contextInit[mode] === false) {
@@ -1348,7 +1396,7 @@ const state = {
       }
 
       shopPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${formatHp(player.hp)}</span>
+        <span id="shopBuyerHp" class="player-gold">${formatHp(player.hp)}</span>
         <span id="shopBuyerGold" class="player-gold">${formatGold(player.gold)}</span>
       `;
       const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: false });
@@ -1529,9 +1577,10 @@ const state = {
       if (!delta) return;
       let metaEl = null;
       if (tileContextMode === "fortuneTeller") metaEl = fortunePlayerMetaEl;
-      if (tileContextMode === "blackMarket") metaEl = blackMarketPlayerMetaEl;
+      if (tileContextMode === "blackMarket") metaEl = shopPlayerMetaEl;
       if (tileContextMode === "altar") metaEl = altarPlayerMetaEl;
-      const goldEl = metaEl ? metaEl.querySelector(".player-gold") : null;
+      const goldEls = metaEl ? metaEl.querySelectorAll(".player-gold") : [];
+      const goldEl = goldEls.length > 1 ? goldEls[goldEls.length - 1] : goldEls[0] || null;
       if (!goldEl) return;
       UIEffects.popGoldAtElement(goldEl, delta);
     }
@@ -2080,11 +2129,14 @@ const state = {
           title: `${getCellTypeLabel("blackMarket")} ${getCellTypeIcon("blackMarket")}`,
           subtitle: t("context.blackMarketSubtitle"),
           playerLabel: t("context.playerLabelBlackMarket"),
-          sectionEl: blackMarketContextSectionEl,
+          sectionEl: shopContextSectionEl,
           refresh: () => {
-            blackMarketActionBtnEl.textContent = t("context.blackMarketAction", { cost: SERVICE_COSTS.blackMarket });
-            renderContextPlayerSelect("blackMarket", t("emptySelect.blackMarket"));
-            renderBlackMarketPlayerInfo();
+            const buyer = renderContextPlayerSelect("blackMarket", t("emptySelect.blackMarket"));
+            const canBuyHere = Boolean(buyer);
+            shopItemsListEl.querySelectorAll("[data-shop-item-id]").forEach((el) => {
+              el.classList.toggle("disabled", !canBuyHere || state.rolling);
+            });
+            renderShopPlayerInventory();
           }
         },
         altar: {
@@ -2350,6 +2402,7 @@ const state = {
     function openVictoryOverlay() {
       renderVictoryOverlay();
       victoryOverlayEl.classList.add("visible");
+      victoryNewGameBtnEl?.focus();
     }
 
     function openInventoryOverlay(playerId) {
@@ -3151,7 +3204,7 @@ const state = {
           logEvent(`${player.name} enters the Relic shop ${getCellTypeIcon("shop")}. Rewards are handed out manually by the Keeper.`);
         }
         if (types.includes("blackMarket")) {
-          logEvent(`${player.name} steps onto the Shadow market ${getCellTypeIcon("blackMarket")}. Right-click the tile to open the ritual menu.`);
+          logEvent(t("ui.enterBlackMarket", { name: player.name, icon: getCellTypeIcon("blackMarket") }));
         }
         if (types.includes("altar")) {
           logEvent(`${player.name} approaches the Blood altar ${getCellTypeIcon("altar")}. Right-click the tile to open the ritual menu.`);
@@ -3308,17 +3361,22 @@ const state = {
       queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [player.id] });
     }
 
-    function applyShopAction(action) {
+    async function applyShopAction(action) {
       if (state.gameEnded) return;
+      if (state.rolling) return;
       const sourceEl = tileContextMenuEl.querySelector(`[data-shop-item-id="${action}"]`);
       const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
+      const isShadowMarket = tileContextMode === "blackMarket";
+      const marketCellType = isShadowMarket ? "blackMarket" : "shop";
+      const marketLabel = isShadowMarket ? "Shadow market" : "Relic shop";
+      const marketIcon = getCellTypeIcon(marketCellType);
       if (!player) {
-        logEvent("Purchase unavailable: no selected player is on the shop tile.");
+        logEvent(`Purchase unavailable: no selected player is on the ${marketLabel} tile.`);
         UIEffects.pulseClass(sourceEl, "shake", 400);
         return;
       }
-      if (!hasCellType(player.position, "shop")) {
-        logEvent(`Purchase denied: ${player.name} must stand on any shop tile ${getCellTypeIcon("shop")}.`);
+      if (!hasCellType(player.position, marketCellType)) {
+        logEvent(`Purchase denied: ${player.name} must stand on the ${marketLabel} tile ${marketIcon}.`);
         UIEffects.pulseClass(sourceEl, "shake", 400);
         return;
       }
@@ -3337,7 +3395,11 @@ const state = {
       }
 
       if (player.gold < item.price) {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${formatGold(item.price)}).`);
+        if (isShadowMarket) {
+          logEvent(t("ui.blackMarketNotEnoughGold", { cell: player.position, name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
+        } else {
+          logEvent(`${marketLabel} (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${formatGold(item.price)}).`);
+        }
         UIEffects.pulseClass(sourceEl, "shake", 400);
         const goldEl = document.getElementById("shopBuyerGold");
         UIEffects.pulseClass(goldEl, "shake", 400);
@@ -3345,42 +3407,139 @@ const state = {
         return;
       }
 
-      pushHistory(`Buy at shop: ${getShopItemName(item)}`);
-      const purchase = ShopActions.purchaseItemState({
-        player,
-        prop: playerProp,
-        itemPrice: item.price,
-        bonusGold: action === "alchemyCrystal" ? REWARDS.alchemyCrystalPurchaseBonusGold : 0
-      });
-      if (!purchase.ok) return;
-      updatePlayerInState(player.id, purchase.player);
+      if (!isShadowMarket) {
+        pushHistory(`Buy at shop: ${getShopItemName(item)}`);
+        const purchase = ShopActions.purchaseItemState({
+          player,
+          prop: playerProp,
+          itemPrice: item.price,
+          bonusGold: action === "alchemyCrystal" ? REWARDS.alchemyCrystalPurchaseBonusGold : 0
+        });
+        if (!purchase.ok) return;
+        updatePlayerInState(player.id, purchase.player);
 
+        UIEffects.pulseClass(sourceEl, "slot-flash", 400);
+        const goldEl = document.getElementById("shopBuyerGold");
+        UIEffects.popGoldAtElement(goldEl, -item.price);
+
+        if (action === "alchemyCrystal") {
+          logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)} and immediately releases +${formatGold(REWARDS.alchemyCrystalPurchaseBonusGold)} energy.`);
+        } else {
+          logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)}.`);
+        }
+
+        queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+
+        // After rerender, highlight the buyer inventory slot that corresponds to this item.
+        setTimeout(() => {
+          const inventorySlotId = action === "shield" ? "shields" : action;
+          const slot = shopPlayerInventoryEl.querySelector(`[data-inv-item-id="${inventorySlotId}"]`);
+          if (!slot) return;
+          UIEffects.pulseClass(slot, "inv-drop", 500);
+        }, 0);
+        return;
+      }
+
+      pushHistory(`Buy at shadow market: ${getShopItemName(item)}`);
+      state.rolling = true;
+      renderStats();
+      renderTurnManager();
+      refreshCurrentContextMenu(true);
+
+      player.gold -= item.price;
       UIEffects.pulseClass(sourceEl, "slot-flash", 400);
       const goldEl = document.getElementById("shopBuyerGold");
       UIEffects.popGoldAtElement(goldEl, -item.price);
 
-      if (action === "alchemyCrystal") {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)} and immediately releases +${formatGold(REWARDS.alchemyCrystalPurchaseBonusGold)} energy.`);
+      const successChance = Math.min(1, Math.max(0, Number(CHANCES.blackMarket?.profitMax ?? 0.45)));
+      const failSlice = (1 - successChance) / 4;
+      const roll = Math.random();
+      let granted = false;
+
+      if (roll < successChance) {
+        player[playerProp] = (player[playerProp] || 0) + 1;
+        granted = true;
+        if (action === "alchemyCrystal") {
+          player.gold += REWARDS.alchemyCrystalPurchaseBonusGold;
+          animateContextGoldDelta(REWARDS.alchemyCrystalPurchaseBonusGold);
+        }
+        logEvent(t("ui.blackMarketBuySuccess", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
+      } else if (roll < successChance + failSlice) {
+        logEvent(t("ui.blackMarketBuyNoItem", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
+      } else if (roll < successChance + failSlice * 2) {
+        const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
+        const beforeHp = player.hp;
+        player.hp = clamp(player.hp - damage, 0, player.maxHp);
+        const hpEl = document.getElementById("shopBuyerHp");
+        UIEffects.popTextAtElement(hpEl, `-${damage}${iconHp()}`);
+        logEvent(t("ui.blackMarketBuyHurt", { name: player.name, price: formatGold(item.price), damage, before: beforeHp, after: player.hp }));
+        if (player.hp <= 0) {
+          eliminatePlayerFromGame(player, "health dropped to 0");
+          state.rolling = false;
+          queueRender({
+            players: true,
+            stats: true,
+            selectedTile: true,
+            refreshInventoryOverlay: true,
+            refreshContextMenu: true,
+            tokensFull: true
+          }, { autosave: true });
+          return;
+        }
+      } else if (roll < successChance + failSlice * 3) {
+        const extraLoss = Math.min(player.gold, Math.max(5, Math.round(item.price * 0.12)));
+        player.gold -= extraLoss;
+        UIEffects.popGoldAtElement(goldEl, -extraLoss);
+        logEvent(t("ui.blackMarketBuyCheated", { name: player.name, price: formatGold(item.price), loss: formatGold(extraLoss) }));
       } else {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)}.`);
+        const from = player.position;
+        let direction = Math.random() < 0.5 ? -1 : 1;
+        if (from <= 1) direction = 1;
+        if (from >= LAST_CELL) direction = -1;
+        const to = clamp(from + direction, 1, LAST_CELL);
+        logEvent(t("ui.blackMarketBuyThrown", { name: player.name, price: formatGold(item.price), from, to }));
+        hideTileContextMenu();
+        await movePlayerAnimated(player, to);
+        const resolved = await resolveCellEffects(player);
+        if (resolved.eliminated) {
+          state.rolling = false;
+          queueRender({
+            players: true,
+            stats: true,
+            selectedTile: true,
+            refreshInventoryOverlay: true,
+            refreshContextMenu: true,
+            tokensFull: true
+          }, { autosave: true });
+          return;
+        }
       }
 
+      state.rolling = false;
+      markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
 
-      // After rerender, highlight the buyer inventory slot that corresponds to this item.
-      setTimeout(() => {
-        const slot = shopPlayerInventoryEl.querySelector(`[data-inv-item-id="${action}"]`);
-        if (!slot) return;
-        UIEffects.pulseClass(slot, "inv-drop", 500);
-      }, 0);
+      if (granted) {
+        setTimeout(() => {
+          const inventorySlotId = action === "shield" ? "shields" : action;
+          const slot = shopPlayerInventoryEl.querySelector(`[data-inv-item-id="${inventorySlotId}"]`);
+          if (!slot) return;
+          UIEffects.pulseClass(slot, "inv-drop", 500);
+        }, 0);
+      }
     }
 
-    function sellShopBuyerItem(invItemId, slotEl) {
+    async function sellShopBuyerItem(invItemId, slotEl) {
       if (state.gameEnded) return;
+      if (state.rolling) return;
       const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
       if (!player) return;
-      if (!hasCellType(player.position, "shop")) {
-        logEvent(`Sale denied: ${player.name} must stand on any shop tile ${getCellTypeIcon("shop")}.`);
+      const isShadowMarket = tileContextMode === "blackMarket";
+      const marketCellType = isShadowMarket ? "blackMarket" : "shop";
+      const marketLabel = isShadowMarket ? "Shadow market" : "Relic shop";
+      const marketIcon = getCellTypeIcon(marketCellType);
+      if (!hasCellType(player.position, marketCellType)) {
+        logEvent(`Sale denied: ${player.name} must stand on the ${marketLabel} tile ${marketIcon}.`);
         return;
       }
 
@@ -3397,31 +3556,116 @@ const state = {
 
       const item = SHOP_ITEMS.find((entry) => entry.id === info.shopId);
       if (!item) return;
-      const sell = ShopActions.sellItemState({
-        player,
-        prop: info.prop,
-        itemPrice: item.price,
-        sellFactor: SELL_FACTOR
-      });
-      if (!sell.ok) return;
-      const sellPrice = sell.gainedGold;
+      const sellPrice = ShopActions.calculateSellPrice(item.price, SELL_FACTOR);
 
       if (slotEl) {
         UIEffects.pulseClass(slotEl, "sell-flash", 400);
         UIEffects.pulseClass(slotEl, "inv-drop", 500);
       }
 
-      pushHistory(`Sell at shop: ${getShopItemName(item)}`);
-      updatePlayerInState(player.id, sell.player);
-      logEvent(`Relic shop (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${formatGold(sellPrice)}.`);
+      pushHistory(`Sell at ${isShadowMarket ? "shadow market" : "shop"}: ${getShopItemName(item)}`);
 
+      if (!isShadowMarket) {
+        const sell = ShopActions.sellItemState({
+          player,
+          prop: info.prop,
+          itemPrice: item.price,
+          sellFactor: SELL_FACTOR
+        });
+        if (!sell.ok) return;
+        updatePlayerInState(player.id, sell.player);
+        logEvent(`${marketLabel} (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${formatGold(sellPrice)}.`);
+
+        queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+
+        // Gold pop/glow after rerender so we target the current gold element.
+        setTimeout(() => {
+          const goldEl = document.getElementById("shopBuyerGold");
+          UIEffects.popGoldAtElement(goldEl, sellPrice);
+        }, 0);
+        return;
+      }
+
+      // Shadow market sell: item is always handed over, but the outcome varies.
+      if ((player[info.prop] || 0) < 1) return;
+      state.rolling = true;
+      renderStats();
+      renderTurnManager();
+      refreshCurrentContextMenu(true);
+
+      player[info.prop] -= 1;
+
+      const successChance = Math.min(1, Math.max(0, Number(CHANCES.blackMarket?.profitMax ?? 0.45)));
+      const failSlice = (1 - successChance) / 4;
+      const roll = Math.random();
+      let goldDelta = 0;
+
+      if (roll < successChance) {
+        player.gold += sellPrice;
+        goldDelta = sellPrice;
+        logEvent(t("ui.blackMarketSellSuccess", { name: player.name, item: getShopItemName(item), gold: formatGold(sellPrice) }));
+      } else if (roll < successChance + failSlice) {
+        logEvent(t("ui.blackMarketSellNoGold", { name: player.name, item: getShopItemName(item) }));
+        hideTileContextMenu();
+      } else if (roll < successChance + failSlice * 2) {
+        const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
+        const beforeHp = player.hp;
+        player.hp = clamp(player.hp - damage, 0, player.maxHp);
+        const hpEl = document.getElementById("shopBuyerHp");
+        UIEffects.popTextAtElement(hpEl, `-${damage}${iconHp()}`);
+        logEvent(t("ui.blackMarketSellHurt", { name: player.name, damage, before: beforeHp, after: player.hp }));
+        if (player.hp <= 0) {
+          eliminatePlayerFromGame(player, "health dropped to 0");
+          state.rolling = false;
+          queueRender({
+            players: true,
+            stats: true,
+            selectedTile: true,
+            refreshInventoryOverlay: true,
+            refreshContextMenu: true,
+            tokensFull: true
+          }, { autosave: true });
+          return;
+        }
+      } else if (roll < successChance + failSlice * 3) {
+        const from = player.position;
+        let direction = Math.random() < 0.5 ? -1 : 1;
+        if (from <= 1) direction = 1;
+        if (from >= LAST_CELL) direction = -1;
+        const to = clamp(from + direction, 1, LAST_CELL);
+        logEvent(t("ui.blackMarketSellThrown", { name: player.name, from, to }));
+        hideTileContextMenu();
+        await movePlayerAnimated(player, to);
+        const resolved = await resolveCellEffects(player);
+        if (resolved.eliminated) {
+          state.rolling = false;
+          queueRender({
+            players: true,
+            stats: true,
+            selectedTile: true,
+            refreshInventoryOverlay: true,
+            refreshContextMenu: true,
+            tokensFull: true
+          }, { autosave: true });
+          return;
+        }
+      } else {
+        const extraLoss = Math.min(player.gold, Math.max(5, Math.round(item.price * 0.12)));
+        player.gold -= extraLoss;
+        goldDelta = -extraLoss;
+        logEvent(t("ui.blackMarketSellCheated", { name: player.name, loss: formatGold(extraLoss) }));
+      }
+
+      state.rolling = false;
+      markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
 
-      // Gold pop/glow after rerender so we target the current gold element.
-      setTimeout(() => {
-        const goldEl = document.getElementById("shopBuyerGold");
-        UIEffects.popGoldAtElement(goldEl, sellPrice);
-      }, 0);
+      if (goldDelta) {
+        setTimeout(() => {
+          const goldEl = document.getElementById("shopBuyerGold");
+          UIEffects.popGoldAtElement(goldEl, goldDelta);
+        }, 0);
+      }
     }
 
     function bindEvents() {
@@ -3466,6 +3710,9 @@ const state = {
       if (eventJournalLauncherEl) {
         eventJournalLauncherEl.addEventListener("click", toggleLogPanel);
       }
+      if (copyLogsBtnEl) {
+        copyLogsBtnEl.addEventListener("click", () => void copyVisibleLogsToClipboard());
+      }
       if (logFilterSelectEl) {
         logFilterSelectEl.addEventListener("change", () => setLogFilter(logFilterSelectEl.value));
       }
@@ -3501,7 +3748,11 @@ const state = {
           return;
         }
         if (tileContextMode === "blackMarket") {
-          renderBlackMarketPlayerInfo();
+          const canBuyHere = buyer && hasCellType(buyer.position, "blackMarket");
+          shopItemsListEl.querySelectorAll("[data-shop-item-id]").forEach((el) => {
+            el.classList.toggle("disabled", !canBuyHere || state.rolling);
+          });
+          renderShopPlayerInventory();
           return;
         }
         if (tileContextMode === "altar") {
@@ -3573,6 +3824,7 @@ const state = {
       saveGameBtnEl.addEventListener("click", () => saveGameState(false));
       loadGameBtnEl.addEventListener("click", loadGameState);
       newGameBtnEl.addEventListener("click", resetGameWithConfirm);
+      victoryNewGameBtnEl?.addEventListener("click", resetGameWithConfirm);
       moveToTileBtnEl.addEventListener("click", moveSelectedPlayerToChosenTile);
       closeInventoryBtnEl.addEventListener("click", closeInventoryOverlay);
       closeVictoryBtnEl.addEventListener("click", closeVictoryOverlay);
@@ -3604,12 +3856,12 @@ const state = {
       shopPlayerInventoryEl.addEventListener("click", (event) => {
         const slot = event.target.closest("[data-inv-item-id]");
         if (!slot) return;
-        sellShopBuyerItem(slot.dataset.invItemId, slot);
+        void sellShopBuyerItem(slot.dataset.invItemId, slot);
       });
       tileContextMenuEl.addEventListener("click", (event) => {
         const button = event.target.closest("[data-shop-item-id]");
         if (button) {
-          applyShopAction(button.dataset.shopItemId);
+          void applyShopAction(button.dataset.shopItemId);
           return;
         }
         const fortuneButton = event.target.closest("[data-fortune-action]");
