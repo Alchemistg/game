@@ -48,12 +48,19 @@
       margin: 0;
       min-height: 100vh;
       color: var(--text);
+      -webkit-user-select: none;
+      user-select: none;
       background:
         radial-gradient(circle at 20% 18%, rgba(179, 72, 90, 0.16), transparent 26%),
         radial-gradient(circle at 82% 14%, rgba(200, 167, 108, 0.1), transparent 22%),
         radial-gradient(circle at 50% 85%, rgba(123, 35, 52, 0.18), transparent 30%),
         linear-gradient(145deg, #0d090c, #171015 38%, #120d12 65%, #0a080b);
       font-family: var(--font-base);
+    }
+
+    input, textarea, select {
+      -webkit-user-select: text;
+      user-select: text;
     }
 
     .layout {
@@ -91,12 +98,8 @@
       flex-direction: column;
       gap: 12px;
       min-width: 280px;
-      max-height: calc(100vh - 28px);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      scrollbar-gutter: stable;
-      padding-right: 4px;
-      overflow-anchor: none;
+      max-height: none;
+      overflow: visible;
     }
 
     body.side-panel-left .layout {
@@ -142,8 +145,8 @@
       width: 100%;
       height: 100%;
       display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      grid-template-rows: repeat(10, 1fr);
+      grid-template-columns: repeat(var(--board-size, 10), 1fr);
+      grid-template-rows: repeat(var(--board-size, 10), 1fr);
       border: 2px solid rgba(200, 167, 108, 0.32);
       border-radius: 10px;
       overflow: hidden;
@@ -163,7 +166,7 @@
     .cell {
       border: 1px solid var(--line);
       position: relative;
-      padding: 3px;
+      padding: var(--cell-pad, 3px);
       font-size: 0.75rem;
       overflow: hidden;
       cursor: pointer;
@@ -173,8 +176,8 @@
     .cell::before {
       content: "";
       position: absolute;
-      inset: 3px;
-      border-radius: 6px;
+      inset: var(--cell-inset, 3px);
+      border-radius: var(--cell-radius, 6px);
       border: 1px solid rgba(200, 167, 108, 0.08);
       pointer-events: none;
     }
@@ -185,7 +188,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) rotate(-10deg);
-      font-size: 1rem;
+      font-size: var(--cell-rune-font, 1rem);
       color: rgba(200, 167, 108, 0.09);
       text-shadow: 0 0 10px rgba(123, 35, 52, 0.16);
       pointer-events: none;
@@ -219,16 +222,16 @@
 
     .cell-num {
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: var(--cell-num-font, 0.78rem);
       color: #f2e6d3;
       text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
     }
 
     .cell-icon {
       position: absolute;
-      right: 4px;
-      bottom: 2px;
-      font-size: 0.9rem;
+      right: var(--cell-icon-right, 4px);
+      bottom: var(--cell-icon-bottom, 2px);
+      font-size: var(--cell-icon-font, 0.9rem);
       opacity: 0.9;
     }
 
@@ -657,13 +660,13 @@
     }
 
     .token {
-      width: 24px;
-      height: 24px;
+      width: var(--token-size, 24px);
+      height: var(--token-size, 24px);
       border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #f4dca1, var(--player) 62%, #7f5f28);
       border: 1px solid #f3dfb0;
       color: #2a150d;
-      font-size: 0.72rem;
+      font-size: var(--token-font, 0.72rem);
       font-weight: 800;
       display: flex;
       align-items: center;
@@ -1258,7 +1261,8 @@
       z-index: 97;
       width: min(300px, calc(100vw - 24px));
       max-height: calc(100vh - 24px);
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
       background: rgba(24, 14, 19, 0.94);
       border: 1px solid rgba(200, 167, 108, 0.24);
       border-radius: 14px;
@@ -1295,9 +1299,18 @@
     }
 
     .settings-tabs {
-      display: inline-flex;
+      display: flex;
+      align-items: center;
       gap: 6px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      width: 100%;
+      padding: 1px 0;
+      overflow: visible;
+    }
+
+    .settings-tabs-spacer {
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     .settings-tab {
@@ -1309,6 +1322,7 @@
       color: #d9cfbf;
       font-size: 0.78rem;
       font-weight: 700;
+      white-space: nowrap;
     }
 
     .settings-tab.is-active {
@@ -1691,23 +1705,23 @@
       .p9 { bottom: 8px; right: 8px; }
 
       .cell {
-        padding: 2px;
+        padding: var(--cell-pad, 2px);
       }
 
       .cell-num {
-        font-size: 0.72rem;
+        font-size: var(--cell-num-font, 0.72rem);
       }
 
       .cell-icon {
-        right: 2px;
-        bottom: 1px;
-        font-size: 0.76rem;
+        right: var(--cell-icon-right, 2px);
+        bottom: var(--cell-icon-bottom, 1px);
+        font-size: var(--cell-icon-font, 0.76rem);
       }
 
       .token {
-        width: 21px;
-        height: 21px;
-        font-size: 0.64rem;
+        width: var(--token-size, 21px);
+        height: var(--token-size, 21px);
+        font-size: var(--token-font, 0.64rem);
       }
     }
 
@@ -1748,22 +1762,22 @@
       }
 
       .cell {
-        padding: 1px;
+        padding: var(--cell-pad, 1px);
       }
 
       .cell-num {
-        font-size: 0.66rem;
+        font-size: var(--cell-num-font, 0.66rem);
       }
 
       .cell-icon {
-        right: 1px;
-        bottom: 1px;
-        font-size: 0.68rem;
+        right: var(--cell-icon-right, 1px);
+        bottom: var(--cell-icon-bottom, 1px);
+        font-size: var(--cell-icon-font, 0.68rem);
       }
 
       .token {
-        width: 18px;
-        height: 18px;
-        font-size: 0.56rem;
+        width: var(--token-size, 18px);
+        height: var(--token-size, 18px);
+        font-size: var(--token-font, 0.56rem);
       }
     }

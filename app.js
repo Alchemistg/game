@@ -94,6 +94,7 @@ const state = {
       const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="#2a2a2a" width="100%" height="100%"/><text x="50%" y="50%" dy=".35em" font-size="28" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif">?</text></svg>');
 
     const boardEl = document.getElementById("board");
+    const boardWrapEl = document.querySelector(".board-wrap");
     const boardStaticLayerEl = document.getElementById("boardStaticLayer");
     const tokensLayerEl = document.getElementById("tokensLayer");
     const gameTitleEl = document.getElementById("gameTitle");
@@ -294,6 +295,31 @@ const state = {
 
     function t(path, params = {}, lang = currentLanguage) {
       return window.GAME_I18N.t(path, params, lang);
+    }
+
+    function uiIcon(path, fallback) {
+      const value = t(path);
+      return value ? String(value) : fallback;
+    }
+
+    function iconHp() {
+      return uiIcon("ui.iconHp", "\u2665");
+    }
+
+    function iconGold() {
+      return uiIcon("ui.iconGold", "\uD83D\uDCB0");
+    }
+
+    function iconUnknown() {
+      return uiIcon("ui.iconUnknown", "\u2753");
+    }
+
+    function formatHp(value) {
+      return `${value}${iconHp()}`;
+    }
+
+    function formatGold(value) {
+      return `${value}${iconGold()}`;
     }
 
     function getTrapLogPhrases() {
@@ -994,6 +1020,40 @@ const state = {
       return Math.max(min, Math.min(max, value));
     }
 
+    function syncBoardScaleVars() {
+      if (!boardWrapEl || !boardEl) return;
+      const boardSize = Math.max(1, Number(BOARD_SIZE) || 10);
+      boardWrapEl.style.setProperty("--board-size", String(boardSize));
+
+      const rect = boardEl.getBoundingClientRect();
+      const boardPx = Math.max(1, Math.min(rect.width || 0, rect.height || 0) || 0);
+      if (!Number.isFinite(boardPx) || boardPx <= 1) return;
+
+      const cellPx = boardPx / boardSize;
+
+      const cellPad = Math.round(clamp(cellPx * 0.10, 1, 4));
+      const cellInset = Math.round(clamp(cellPx * 0.12, 1, 4));
+      const cellRadius = Math.round(clamp(cellPx * 0.22, 3, 8));
+      const cellNumFont = Math.round(clamp(cellPx * 0.33, 8, 14));
+      const cellIconFont = Math.round(clamp(cellPx * 0.42, 9, 16));
+      const cellRuneFont = Math.round(clamp(cellPx * 0.48, 10, 18));
+      const cellIconRight = Math.round(clamp(cellPx * 0.12, 1, 5));
+      const cellIconBottom = Math.round(clamp(cellPx * 0.10, 1, 4));
+      const tokenSize = Math.round(clamp(cellPx * 0.62, 14, 26));
+      const tokenFont = Math.round(clamp(cellPx * 0.32, 9, 14));
+
+      boardWrapEl.style.setProperty("--cell-pad", `${cellPad}px`);
+      boardWrapEl.style.setProperty("--cell-inset", `${cellInset}px`);
+      boardWrapEl.style.setProperty("--cell-radius", `${cellRadius}px`);
+      boardWrapEl.style.setProperty("--cell-num-font", `${cellNumFont}px`);
+      boardWrapEl.style.setProperty("--cell-icon-font", `${cellIconFont}px`);
+      boardWrapEl.style.setProperty("--cell-rune-font", `${cellRuneFont}px`);
+      boardWrapEl.style.setProperty("--cell-icon-right", `${cellIconRight}px`);
+      boardWrapEl.style.setProperty("--cell-icon-bottom", `${cellIconBottom}px`);
+      boardWrapEl.style.setProperty("--token-size", `${tokenSize}px`);
+      boardWrapEl.style.setProperty("--token-font", `${tokenFont}px`);
+    }
+
     function normalizePlayerHp(playerLike) {
       const maxHpRaw = Number(playerLike?.maxHp);
       const maxHp = Math.max(1, Number.isFinite(maxHpRaw) ? maxHpRaw : PLAYER_MAX_HP);
@@ -1138,7 +1198,7 @@ const state = {
     function renderShopMenuItems() {
       shopItemsListEl.innerHTML = "";
       SHOP_ITEMS.forEach((item) => {
-        const info = SHOP_ITEM_META[item.id] || { icon: "??" };
+        const info = SHOP_ITEM_META[item.id] || { icon: iconUnknown() };
         const itemName = getShopItemName(item);
         const itemDesc = getShopItemDesc(item, currentLanguage);
         const slot = document.createElement("div");
@@ -1146,7 +1206,7 @@ const state = {
         slot.dataset.shopItemId = item.id;
         slot.innerHTML = `
           <span class="item-icon">${info.icon}</span>
-          <span class="slot-price">${item.price}??</span>
+          <span class="slot-price">${formatGold(item.price)}</span>
           <div class="item-tooltip"><b>${itemName}</b><br>${itemDesc}</div>
         `;
         shopItemsListEl.appendChild(slot);
@@ -1288,8 +1348,8 @@ const state = {
       }
 
       shopPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ??</span>
-        <span id="shopBuyerGold" class="player-gold">${player.gold} ??</span>
+        <span class="player-gold">${formatHp(player.hp)}</span>
+        <span id="shopBuyerGold" class="player-gold">${formatGold(player.gold)}</span>
       `;
       const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: false });
       shopPlayerInventoryEl.innerHTML = slotsHtml;
@@ -1312,8 +1372,8 @@ const state = {
         fortuneTextEl.textContent = t("context.fortuneSubtitle");
       }
       fortunePlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ??</span>
-        <span class="player-gold">${player.gold} ??</span>
+        <span class="player-gold">${formatHp(player.hp)}</span>
+        <span class="player-gold">${formatGold(player.gold)}</span>
       `;
       fortuneActionBtnEl.disabled = state.rolling || !onFortuneCell || !canPay || Boolean(player.fortuneQuest);
     }
@@ -1417,7 +1477,7 @@ const state = {
 
       updatePlayerInState(player.id, result.player);
       if (result.reward === "gold") {
-        logEvent(`${player.name} receives a prophecy reward of +${result.gold}??.`);
+        logEvent(`${player.name} receives a prophecy reward of +${formatGold(result.gold)}.`);
         return;
       }
       if (result.reward === "shield") {
@@ -1443,8 +1503,8 @@ const state = {
       const onBlackMarket = hasCellType(player.position, "blackMarket");
       const canPay = player.gold >= SERVICE_COSTS.blackMarket;
       blackMarketPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ??</span>
-        <span class="player-gold">${player.gold} ??</span>
+        <span class="player-gold">${formatHp(player.hp)}</span>
+        <span class="player-gold">${formatGold(player.gold)}</span>
       `;
       blackMarketActionBtnEl.disabled = state.rolling || !onBlackMarket || !canPay;
     }
@@ -1459,8 +1519,8 @@ const state = {
       const onAltar = hasCellType(player.position, "altar");
       const canPay = player.gold >= SERVICE_COSTS.altar;
       altarPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ??</span>
-        <span class="player-gold">${player.gold} ??</span>
+        <span class="player-gold">${formatHp(player.hp)}</span>
+        <span class="player-gold">${formatGold(player.gold)}</span>
       `;
       altarActionBtnEl.disabled = state.rolling || !onAltar || !canPay;
     }
@@ -1885,6 +1945,7 @@ const state = {
     }
 
     function createBoard() {
+      syncBoardScaleVars();
       boardEl.innerHTML = "";
       boardCellEls = new Array(LAST_CELL + 1);
       cellCenters = new Array(LAST_CELL + 1);
@@ -2188,7 +2249,7 @@ const state = {
         quest
       });
       if (!result.ok && result.reason === "not_enough_gold") {
-        logEvent(`${player.name} approaches the Oracle ${getCellTypeIcon("fortuneTeller")}, but lacks ${fortuneCost}?? for the ritual.`);
+        logEvent(`${player.name} approaches the Oracle ${getCellTypeIcon("fortuneTeller")}, but lacks ${formatGold(fortuneCost)} for the ritual.`);
         return false;
       }
       if (!result.ok && result.reason === "already_has_quest") {
@@ -2200,7 +2261,7 @@ const state = {
       }
       updatePlayerInState(player.id, result.player);
       animateContextGoldDelta(-fortuneCost);
-      logEvent(`${player.name} pays ${fortuneCost}?? to the Oracle ${getCellTypeIcon("fortuneTeller")} and receives the sign: ${quest.omenLabel}.`);
+      logEvent(`${player.name} pays ${formatGold(fortuneCost)} to the Oracle ${getCellTypeIcon("fortuneTeller")} and receives the sign: ${quest.omenLabel}.`);
       logEvent(`Oracle wording for ${player.name}: ${getFortuneQuestConditionText(quest)}`);
       return false;
     }
@@ -2217,7 +2278,7 @@ const state = {
         maxLossGold: REWARDS.blackMarketMaxLossGold
       });
       if (!result.ok && result.reason === "not_enough_gold") {
-        logEvent(`${player.name} enters the Shadow market ${getCellTypeIcon("blackMarket")}, but lacks ${fee}?? for the deal.`);
+        logEvent(`${player.name} enters the Shadow market ${getCellTypeIcon("blackMarket")}, but lacks ${formatGold(fee)} for the deal.`);
         return;
       }
       if (!result.ok) return;
@@ -2226,12 +2287,12 @@ const state = {
       animateContextGoldDelta(-fee);
       if (result.outcome === "profit") {
         animateContextGoldDelta(REWARDS.blackMarketProfitGold);
-        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")} and lands a profitable deal: +${REWARDS.blackMarketProfitGold}??.`);
+        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")} and lands a profitable deal: +${formatGold(REWARDS.blackMarketProfitGold)}.`);
       } else if (result.outcome === "loss") {
         animateContextGoldDelta(-result.loss);
-        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")}, but gets tricked and loses another ${result.loss}??.`);
+        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")}, but gets tricked and loses another ${formatGold(result.loss)}.`);
       } else if (result.outcome === "shield") {
-        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")} and gets a rare trophy: +1 Protection Seal.`);
+        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")} and gets a rare trophy: +1 Protection Seal.`);
       }
     }
 
@@ -2250,14 +2311,14 @@ const state = {
       animateContextGoldDelta(result.delta);
 
       if (result.outcome === "shield") {
-        logEvent(`${player.name} offers ${tribute}?? at the Altar ${getCellTypeIcon("altar")} and receives a blessing: +1 Protection Seal.`);
+        logEvent(`${player.name} offers ${formatGold(tribute)} at the Altar ${getCellTypeIcon("altar")} and receives a blessing: +1 Protection Seal.`);
         return;
       }
       if (result.outcome === "boots") {
-        logEvent(`${player.name} offers ${tribute}?? at the Altar ${getCellTypeIcon("altar")} and receives the gift of the path: +1 Ritual Greaves.`);
+        logEvent(`${player.name} offers ${formatGold(tribute)} at the Altar ${getCellTypeIcon("altar")} and receives the gift of the path: +1 Ritual Greaves.`);
         return;
       }
-      logEvent(`${player.name} tries to address the Altar ${getCellTypeIcon("altar")} without tribute and loses ${result.penalty}??.`);
+      logEvent(`${player.name} tries to address the Altar ${getCellTypeIcon("altar")} without tribute and loses ${formatGold(result.penalty)}.`);
     }
 
     function closeInventoryOverlay() {
@@ -2325,8 +2386,8 @@ const state = {
       const effectsHtml = buildEffectsPanelHtml(player);
 
       inventoryNameEl.textContent = player.name || t("ui.inventoryName");
-      if (inventoryHpEl) inventoryHpEl.textContent = `${player.hp} ??`;
-      inventoryGoldEl.textContent = `${player.gold} ??`;
+      if (inventoryHpEl) inventoryHpEl.textContent = formatHp(player.hp);
+      inventoryGoldEl.textContent = formatGold(player.gold);
       inventoryBodyEl.innerHTML = `
         <div class="inventory-slots">${slotsHtml}</div>
         ${effectsHtml}
@@ -2360,7 +2421,7 @@ const state = {
         player.luckCharm -= 1;
         player.gold += REWARDS.luckCharmGold;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} opens the Charm of favor and receives +${REWARDS.luckCharmGold}??.`);
+        logEvent(`${player.name} opens the Charm of favor and receives +${formatGold(REWARDS.luckCharmGold)}.`);
         queueRenderFromDirty({ autosave: true });
         return;
       }
@@ -2397,7 +2458,7 @@ const state = {
         player.alchemyCrystal -= 1;
         player.gold += REWARDS.alchemyCrystalUseGold;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} shatters a Blood shard and receives +${REWARDS.alchemyCrystalUseGold}??.`);
+        logEvent(`${player.name} shatters a Blood shard and receives +${formatGold(REWARDS.alchemyCrystalUseGold)}.`);
         queueRenderFromDirty({ autosave: true });
         return;
       }
@@ -2496,7 +2557,7 @@ const state = {
           ? t("ui.finishStatus", { order: player.finishOrder || "?" })
           : "";
         const tileLabel = t("ui.tile");
-        selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${player.hp} ??</span>, ${player.gold}??${statusText})</span>`;
+        selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${formatHp(player.hp)}</span>, ${formatGold(player.gold)}${statusText})</span>`;
         removeBtnEl.dataset.removePlayerId = player.id;
 
         fragment.appendChild(rowEl);
@@ -2642,8 +2703,8 @@ const state = {
         <div class="player-header">
           <span class="player-name">${player.name}</span>
           <span class="player-meta">
-            <span class="player-gold">${player.hp} ??</span>
-            <span class="player-gold">${player.gold} ??</span>
+            <span class="player-gold">${formatHp(player.hp)}</span>
+            <span class="player-gold">${formatGold(player.gold)}</span>
           </span>
         </div>
         <div><strong>${t("ui.inventoryTitle")}:</strong></div>
@@ -3081,7 +3142,7 @@ const state = {
         if (types.includes("boost")) {
           const from = player.position;
           const to = clamp(player.position + balance.boostForward, 1, LAST_CELL);
-          logEvent(`${player.name} touches the Power seal ${getCellTypeIcon("boost")} (${getPhaseLabel(balance.key)}) and surges from ${from} -> ${to}.`);
+          logEvent(`${player.name} touches the Power seal ${getCellTypeIcon("boost")} (${getPhaseLabel(balance.key, "en")}) and surges from ${from} -> ${to}.`);
           await movePlayerAnimated(player, to);
           continue;
         }
@@ -3134,7 +3195,11 @@ const state = {
       const finalRoll = dice + bonus;
       const from = player.position;
       const target = clamp(player.position + finalRoll, 1, LAST_CELL);
-      logEvent(`${player.name} rolled the die: ${dice}${bonus ? ` (+${bonus})` : ""} = ${finalRoll}. Move: ${from} -> ${target}.`);
+      if (bonus) {
+        logEvent(`${player.name} rolled the die: ${dice} (+${bonus}) = ${finalRoll}. Move: ${from} -> ${target}.`);
+      } else {
+        logEvent(`${player.name} rolled the die: ${dice}. Move: ${from} -> ${target}.`);
+      }
 
       await movePlayerAnimated(player, target);
       try {
@@ -3272,7 +3337,7 @@ const state = {
       }
 
       if (player.gold < item.price) {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${item.price}??).`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${formatGold(item.price)}).`);
         UIEffects.pulseClass(sourceEl, "shake", 400);
         const goldEl = document.getElementById("shopBuyerGold");
         UIEffects.pulseClass(goldEl, "shake", 400);
@@ -3295,9 +3360,9 @@ const state = {
       UIEffects.popGoldAtElement(goldEl, -item.price);
 
       if (action === "alchemyCrystal") {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}?? and immediately releases +${REWARDS.alchemyCrystalPurchaseBonusGold}?? energy.`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)} and immediately releases +${formatGold(REWARDS.alchemyCrystalPurchaseBonusGold)} energy.`);
       } else {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}??.`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)}.`);
       }
 
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
@@ -3348,7 +3413,7 @@ const state = {
 
       pushHistory(`Sell at shop: ${getShopItemName(item)}`);
       updatePlayerInState(player.id, sell.player);
-      logEvent(`Relic shop (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${sellPrice}??.`);
+      logEvent(`Relic shop (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${formatGold(sellPrice)}.`);
 
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
 
@@ -3450,7 +3515,7 @@ const state = {
         withSelectedPlayer((player) => {
           pushHistory("Add gold");
           player.gold += 50;
-          logEvent(`Keeper grants ${player.name} +50?? (total: ${player.gold}).`);
+          logEvent(`Keeper grants ${player.name} +${formatGold(50)} (total: ${formatGold(player.gold)}).`);
         });
       });
 
@@ -3458,7 +3523,7 @@ const state = {
         withSelectedPlayer((player) => {
           pushHistory("Remove gold");
           player.gold = Math.max(0, player.gold - 50);
-          logEvent(`Keeper takes 50?? from ${player.name} (total: ${player.gold}).`);
+          logEvent(`Keeper takes ${formatGold(50)} from ${player.name} (total: ${formatGold(player.gold)}).`);
         });
       });
 
@@ -3628,6 +3693,7 @@ const state = {
       });
 
       window.addEventListener("resize", () => {
+        syncBoardScaleVars();
         invalidateCellCenterCache();
         renderBoardStaticLayer();
         queueRender({
@@ -3653,6 +3719,7 @@ const state = {
       buildCells();
       createBoard();
       bindEvents();
+      syncBoardScaleVars();
       syncSidePanelPosition();
       syncInstallButton();
       applyStaticTranslations();

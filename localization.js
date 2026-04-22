@@ -96,8 +96,11 @@
         settingsLauncher: "⚙",
         settingsTitle: "Настройки",
         settingsClose: "×",
-        settingsTabGeneral: "Настройки",
+        settingsTabGeneral: "Базовые",
         settingsTabConfig: "Конфиг",
+        iconHp: "\u2665",
+        iconGold: "\uD83D\uDCB0",
+        iconUnknown: "\u2753",
         selectedPlayerTitle: "Избранник Круга",
         rollBtn: "🎲 Бросить кость знака",
         willTitle: "Воля Хранителя",
@@ -172,7 +175,7 @@
         goldOnCellTypeDebug: "Имей не менее {minGold}💰 и стой на клетке типа \"{cellTypeLabel}\".",
       },
       items: {
-        boots: { name: "Ритуальные поножи (+2 к броску)", desc: "+2 к следующему броску" },
+        boots: { name: "Ритуальные поножи", desc: "+2 к следующему броску" },
         shield: { name: "Печать защиты (блок ловушки)", desc: "Гасит действие проклятой клетки" },
         luckCharm: { name: "Талисман благосклонности", desc: "Приносит +40 золота" },
         trapKit: { name: "Набор проклятых печатей", desc: "Накладывает проклятую печать на выбранную клетку" },
@@ -289,8 +292,11 @@
         settingsLauncher: "⚙",
         settingsTitle: "Settings",
         settingsClose: "×",
-        settingsTabGeneral: "Settings",
+        settingsTabGeneral: "Basic",
         settingsTabConfig: "Config",
+        iconHp: "\u2665",
+        iconGold: "\uD83D\uDCB0",
+        iconUnknown: "\u2753",
         selectedPlayerTitle: "Chosen of the Circle",
         rollBtn: "🎲 Roll the sign die",
         willTitle: "Keeper's will",
@@ -365,7 +371,7 @@
         goldOnCellTypeDebug: "Have at least {minGold}💰 and stand on a \"{cellTypeLabel}\" tile.",
       },
       items: {
-        boots: { name: "Ritual greaves (+2 to roll)", desc: "+2 to the next roll" },
+        boots: { name: "Ritual greaves", desc: "+2 to the next roll" },
         shield: { name: "Protection seal (blocks traps)", desc: "Cancels the effect of a cursed cell" },
         luckCharm: { name: "Charm of favor", desc: "Grants +40 gold" },
         trapKit: { name: "Cursed seal kit", desc: "Places a cursed seal on a chosen cell" },
@@ -482,8 +488,11 @@
         settingsLauncher: "⚙",
         settingsTitle: "Налаштування",
         settingsClose: "×",
-        settingsTabGeneral: "Налаштування",
+        settingsTabGeneral: "Базові",
         settingsTabConfig: "Конфіг",
+        iconHp: "\u2665",
+        iconGold: "\uD83D\uDCB0",
+        iconUnknown: "\u2753",
         selectedPlayerTitle: "Обраний кола",
         rollBtn: "🎲 Кинути кубик знака",
         willTitle: "Воля Хранителя",
@@ -558,7 +567,7 @@
         goldOnCellTypeDebug: "Мати щонайменше {minGold}💰 і стояти на клітинці типу \"{cellTypeLabel}\".",
       },
       items: {
-        boots: { name: "Ритуальні поножі (+2 до кидка)", desc: "+2 до наступного кидка" },
+        boots: { name: "Ритуальні поножі", desc: "+2 до наступного кидка" },
         shield: { name: "Печатка захисту (блокує пастки)", desc: "Гасить дію проклятої клітинки" },
         luckCharm: { name: "Талісман прихильності", desc: "Приносить +40 золота" },
         trapKit: { name: "Набір проклятих печаток", desc: "Накладає прокляту печатку на вибрану клітинку" },
@@ -728,7 +737,9 @@
     const exact = staticMessages[lang]?.[text];
     if (exact) return exact;
 
+    const goldIcon = t("ui.iconGold", {}, lang) || "💰";
     const patterns = [
+      [/^(.+) hits a trap .* and takes (\d+) HP damage \((\d+) -> (\d+)\)\.$/i, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} попал в ловушку и получает ${b} урона по HP (${c} -> ${d}).`],
       [/^(.+) receives a prophecy reward of \+(\d+)💰\.$/, (m, a, b) => lang === "uk" ? `${a} отримує нагороду за пророцтво: +${b}💰.` : `${a} получает награду за предсказание: +${b}💰.`],
       [/^(.+) receives \+1 Protection Seal\.$/, (m, a) => lang === "uk" ? `${a} отримує +1 Печатку захисту.` : `${a} получает +1 Печать защиты.`],
       [/^(.+) receives \+1 Ritual Greaves\.$/, (m, a) => lang === "uk" ? `${a} отримує +1 Ритуальні поножі.` : `${a} получает +1 Ритуальные поножи.`],
@@ -746,7 +757,7 @@
       [/^(.+) offers (\d+)💰 at the Altar .* and receives the gift of the path: \+1 Ritual Greaves\.$/, (m, a, b) => lang === "uk" ? `${a} приносить ${b}💰 на Вівтарі та отримує дар шляху: +1 Ритуальні поножі.` : `${a} приносит ${b}💰 на Алтаре и получает дар пути: +1 Ритуальные поножи.`],
       [/^(.+) tries to address the Altar .* without tribute and loses (\d+)💰\.$/, (m, a, b) => lang === "uk" ? `${a} намагається звернутися до Вівтаря без дару й втрачає ${b}💰.` : `${a} пытается обратиться к Алтарю без подношения и теряет ${b}💰.`],
       [/^(.+): Ritual greaves are already primed for the next roll\.$/, (m, a) => lang === "uk" ? `${a}: Ритуальні поножі вже заряджені на наступний кидок.` : `${a}: Ритуальные поножи уже заряжены на следующий бросок.`],
-      [/^(.+) activates Ritual Greaves\. The next roll gets \+2\.$/, (m, a) => lang === "uk" ? `${a} активує Ритуальні поножі. Наступний кидок отримує +2.` : `${a} активирует Ритуальные поножи. Следующий бросок получает +2.`],
+      [/^(.+) activates Ritual greaves\. The next roll gets \+2\.$/i, (m, a) => lang === "uk" ? `${a} активує Ритуальні поножі. Наступний кидок отримує +2.` : `${a} активирует Ритуальные поножи. Следующий бросок получает +2.`],
       [/^(.+) opens the Charm of favor and receives \+(\d+)💰\.$/, (m, a, b) => lang === "uk" ? `${a} розмикає Талісман прихильності та отримує +${b}💰.` : `${a} размыкает Талисман благосклонности и получает +${b}💰.`],
       [/^(.+): cannot place a trap on start or finish\.$/, (m, a) => lang === "uk" ? `${a}: не можна поставити пастку на старт або фініш.` : `${a}: нельзя поставить ловушку на старт или финиш.`],
       [/^(.+): a trap already exists on tile (\d+)\.$/, (m, a, b) => lang === "uk" ? `${a}: на клітинці ${b} вже є пастка.` : `${a}: на клетке ${b} уже есть ловушка.`],
@@ -757,30 +768,36 @@
       [/^(.+) enters the game\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `В игру вступает ${a}.`],
       [/^Player (.+) removed from the game\.$/, (m, a) => lang === "uk" ? `Гравця ${a} видалено з гри.` : `Игрок ${a} удален из игры.`],
       [/^(.+) drops out of the match: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${translateEliminationReason(b, lang)}.` : `${a} выбывает из партии: ${translateEliminationReason(b, lang)}.`],
-      [/^(.+) hit a trap .* but the Protection Seal saved them! The seal dissipated\.$/, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} попал в ловушку, но Печать защиты спасает! Печать рассеялась.`],
+      [/^(.+) hits? a trap .* but the Protection Seal sav(?:es|ed) them! The seal dissipat(?:es|ed)\.$/i, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} попал в ловушку, но Печать защиты спасает! Печать рассеялась.`],
       [/^(.+) hit a trap .* and takes (\d+) HP damage \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} попал в ловушку и получает ${b} урона по HP (${c} -> ${d}).`],
-      [/^(.+) touches the Power Seal .* and surges from (\d+) -> (\d+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} касается Печати силы и рывком проходит путь ${b} -> ${c}.`],
+      [/^(.+) touches the Power seal .* and surges from (\d+) -> (\d+)\.$/i, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} касается Печати силы и рывком проходит путь ${b} -> ${c}.`],
       [/^(.+) enters the Relic shop .* Rewards are handed out manually by the Keeper\.$/, (m, a) => lang === "uk" ? `${a} входить до Крамниці реліквій. Дарунки видає Хранитель вручну.` : `${a} входит в Лавку реликвий. Дары выдаются Хранителем вручную.`],
       [/^(.+) steps onto the Shadow market .* Right-click the tile to open the ritual menu\.$/, (m, a) => lang === "uk" ? `${a} ступає на Тіньовий торг. Натисніть ПКМ по клітинці, щоб відкрити ритуальне меню.` : `${a} ступает на Теневой торг. Нажмите ПКМ по клетке, чтобы открыть ритуальное меню.`],
       [/^(.+) approaches the Blood altar .* Right-click the tile to open the ritual menu\.$/, (m, a) => lang === "uk" ? `${a} наближається до Кривавого вівтаря. Натисніть ПКМ по клітинці, щоб відкрити ритуальне меню.` : `${a} приближается к Кровавому алтарю. Нажмите ПКМ по клетке, чтобы открыть ритуальное меню.`],
       [/^(.+) enters the Oracle circle .* Right-click the Oracle tile to open the ritual menu\.$/, (m, a) => lang === "uk" ? `${a} входить до кола Оракула. Натисніть ПКМ по клітинці Оракула, щоб відкрити ритуальне меню.` : `${a} входит в круг Оракула. Нажмите ПКМ по клетке Оракула, чтобы открыть ритуальное меню.`],
-      [/^(.+) activated Ritual Greaves: \+2 to the roll\.$/, (m, a) => lang === "uk" ? `${a} активував Ритуальні поножі: +2 до кидка.` : `${a} активировал Ритуальные поножи: +2 к броску.`],
-      [/^(.+) rolled the die: (\d+)(?: \(\+(\d+)\))? = (\d+)\. Move: (\d+) -> (\d+)\.$/, (m, a, b, c, d, e, f) => lang === "uk"
-        ? `${a} кинув кубик: ${b}${c ? ` (+${c})` : ""} = ${d}. Хід: ${e} -> ${f}.`
-        : `${a} бросил кубик: ${b}${c ? ` (+${c})` : ""} = ${d}. Ход: ${e} -> ${f}.`],
+      [/^(.+) activated Ritual greaves: \+2 to the roll\.$/i, (m, a) => lang === "uk" ? `${a} активував Ритуальні поножі: +2 до кидка.` : `${a} активировал Ритуальные поножи: +2 к броску.`],
+      [/^(.+) rolled the die: (\d+)(?: \(\+(\d+)\))?(?: = (\d+))?\. Move: (\d+) -> (\d+)\.$/, (m, a, b, c, d, e, f) => {
+        const bonusPart = c ? ` (+${c})` : "";
+        const total = d || (Number(b) + Number(c || 0));
+        const rollPart = c ? `${b}${bonusPart} = ${total}` : `${b}`;
+        return lang === "uk"
+          ? `${a} кинув кубик: ${rollPart}. Хід: ${e} -> ${f}.`
+          : `${a} бросил кубик: ${rollPart}. Ход: ${e} -> ${f}.`;
+      }],
       [/^Turn passed to: (.+)\.$/, (m, a) => lang === "uk" ? `Хід передано: ${a}.` : `Ход передан: ${a}.`],
       [/^Undid action: (.+)\.$/, (m, a) => lang === "uk" ? `Скасовано дію: ${a}.` : `Отмена действия: ${a}.`],
       [/^Keeper moves (.+) to tile (\d+) \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `Хранитель переносить ${a} на клітинку ${b} (${c} -> ${d}).` : `Хранитель переносит ${a} на клетку ${b} (${c} -> ${d}).`],
       [/^Purchase denied: (.+) must stand on any shop tile .*$/, (m, a) => lang === "uk" ? `Купівлю відхилено: ${a} має стояти на будь-якій клітинці крамниці.` : `Покупка отклонена: ${a} должен стоять на любой клетке магазина.`],
       [/^Inventory full: (.+) has all (\d+) slots occupied \(a free slot is needed for a new item type\)\.$/, (m, a, b) => lang === "uk" ? `Інвентар повний: у ${a} зайнято всі ${b} слоти (потрібен вільний слот для нового типу предмета).` : `Инвентарь полон: у ${a} заняты все ${b} слота (нужен свободный слот для нового типа предмета).`],
+      [/^Inventory full: (.+) has all (\d+) slots occupied\.$/, (m, a, b) => lang === "uk" ? `Інвентар повний: у ${a} зайнято всі ${b} слоти.` : `Инвентарь полон: у ${a} заняты все ${b} слота.`],
       [/^Relic shop \(tile (\d+)\): (.+) lacks gold to buy "(.+)" \((\d+)💰\)\.$/, (m, a, b, c, d) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): у ${b} не вистачає золота для купівлі "${c}" (${d}💰).` : `Лавка реликвий (клетка ${a}): у ${b} не хватает золота для покупки "${c}" (${d}💰).`],
       [/^Relic shop \(tile (\d+)\): (.+) gets "(.+)" for (\d+)💰 and immediately releases \+(\d+)💰 energy\.$/, (m, a, b, c, d, e) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): ${b} отримує "${c}" за ${d}💰 і одразу вивільняє +${e}💰 енергії.` : `Лавка реликвий (клетка ${a}): ${b} получает "${c}" за ${d}💰 и тут же высвобождает +${e}💰 энергии.`],
       [/^Relic shop \(tile (\d+)\): (.+) gets "(.+)" for (\d+)💰\.$/, (m, a, b, c, d) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): ${b} отримує "${c}" за ${d}💰.` : `Лавка реликвий (клетка ${a}): ${b} получает "${c}" за ${d}💰.`],
       [/^Sale denied: (.+) must stand on any shop tile .*$/, (m, a) => lang === "uk" ? `Продаж відхилено: ${a} має стояти на будь-якій клітинці крамниці.` : `Продажа отклонена: ${a} должен стоять на любой клетке магазина.`],
       [/^Relic shop \(tile (\d+)\): (.+) trades 1x "(.+)" for \+(\d+)💰\.$/, (m, a, b, c, d) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): ${b} передає 1x "${c}" в обмін на +${d}💰.` : `Лавка реликвий (клетка ${a}): ${b} передает 1x "${c}" в обмен на +${d}💰.`],
-      [/^Keeper grants (.+) \+50💰 \(total: (\d+)\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель дарує ${a} +50💰 (разом: ${b}).` : `Хранитель дарует ${a} +50💰 (итого: ${b}).`],
-      [/^Keeper takes 50💰 from (.+) \(total: (\d+)\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель вилучає у ${a} 50💰 (разом: ${b}).` : `Хранитель изымает у ${a} 50💰 (итого: ${b}).`],
-      [/^Keeper hands (.+) Ritual Greaves \(total: (\d+)\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель вручає ${a} Ритуальні поножі (усього: ${b}).` : `Хранитель вручает ${a} Ритуальные поножи (всего: ${b}).`],
+      [/^Keeper grants (.+) \+50\D* \(total: (\d+)\D*\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель дарує ${a} +50${goldIcon} (разом: ${b}${goldIcon}).` : `Хранитель дарует ${a} +50${goldIcon} (итого: ${b}${goldIcon}).`],
+      [/^Keeper takes 50\D* from (.+) \(total: (\d+)\D*\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель вилучає у ${a} 50${goldIcon} (разом: ${b}${goldIcon}).` : `Хранитель изымает у ${a} 50${goldIcon} (итого: ${b}${goldIcon}).`],
+      [/^Keeper hands (.+) Ritual greaves \(total: (\d+)\)\.$/i, (m, a, b) => lang === "uk" ? `Хранитель вручає ${a} Ритуальні поножі (усього: ${b}).` : `Хранитель вручает ${a} Ритуальные поножи (всего: ${b}).`],
       [/^Keeper hands (.+) Protection Seal \(total: (\d+)\)\.$/, (m, a, b) => lang === "uk" ? `Хранитель вручає ${a} Печатку захисту (усього: ${b}).` : `Хранитель вручает ${a} Печать защиты (всего: ${b}).`],
       [/^Keeper punishes (.+): -3 tiles \((\d+) -> (\d+)\)\.$/, (m, a, b, c) => lang === "uk" ? `Хранитель карає ${a}: -3 клітинки (${b} -> ${c}).` : `Хранитель карает ${a}: -3 клетки (${b} -> ${c}).`],
       [/^Prophecy unavailable: no player is selected at the Oracle\.$/, (m) => lang === "uk" ? "Ворожіння недоступне: у Оракула немає вибраного гравця." : "Гадание недоступно: у Гадалки нет выбранного игрока."],
@@ -815,22 +832,29 @@
       [/^В игру вступает (.+)\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `${a} enters the game.`],
       [/^Игрок (.+) удален из игры\.$/, (m, a) => lang === "uk" ? `Гравця ${a} видалено з гри.` : `Player ${a} removed from the game.`],
       [/^(.+) выбывает из партии: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${translateEliminationReason(b, lang)}.` : `${a} drops out of the match: ${translateEliminationReason(b, lang)}.`],
-      [/^(.+) попал в ловушку .* но Печать защиты спасает! Печать рассеялась\.$/, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} hit a trap, but the Protection Seal saved them! The seal dissipated.`],
+      [/^(.+) попал в ловушку .* но Печать защиты спасает! Печать рассеялась\.$/, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} hits a trap, but the Protection Seal saves them! The seal dissipates.`],
       [/^(.+) попал в ловушку .* и получает (\d+) урона по HP \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} hit a trap and takes ${b} HP damage (${c} -> ${d}).`],
-      [/^(.+) касается Печати силы .* и рывком проходит путь (\d+) -> (\d+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} touches the Power Seal and surges from ${b} -> ${c}.`],
+      [/^(.+) касается Печати силы .* и рывком проходит путь (\d+) -> (\d+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} touches the Power seal and surges from ${b} -> ${c}.`],
       [/^(.+) входит в Лавку реликвий .* Дары выдаются Хранителем вручную\.$/, (m, a) => lang === "uk" ? `${a} входить до Крамниці реліквій. Дарунки видає Хранитель вручну.` : `${a} enters the Relic shop. Rewards are handed out manually by the Keeper.`],
       [/^(.+) ступает на Теневой торг .* Нажмите ПКМ по клетке, чтобы открыть ритуальное меню\.$/, (m, a) => lang === "uk" ? `${a} ступає на Тіньовий торг. Натисніть ПКМ по клітинці, щоб відкрити ритуальне меню.` : `${a} steps onto the Shadow market. Right-click the tile to open the ritual menu.`],
       [/^(.+) приближается к Кровавому алтарю .* Нажмите ПКМ по клетке, чтобы открыть ритуальное меню\.$/, (m, a) => lang === "uk" ? `${a} наближається до Кривавого вівтаря. Натисніть ПКМ по клітинці, щоб відкрити ритуальне меню.` : `${a} approaches the Blood altar. Right-click the tile to open the ritual menu.`],
       [/^(.+) входит в круг Оракула .* Нажмите ПКМ по клетке Оракула, чтобы открыть ритуальное меню\.$/, (m, a) => lang === "uk" ? `${a} входить до кола Оракула. Натисніть ПКМ по клітинці Оракула, щоб відкрити ритуальне меню.` : `${a} enters the Oracle circle. Right-click the Oracle tile to open the ritual menu.`],
       [/^(.+) активировал Ритуальные поножи: \+2 к броску\.$/, (m, a) => lang === "uk" ? `${a} активував Ритуальні поножі: +2 до кидка.` : `${a} activated Ritual Greaves: +2 to the roll.`],
-      [/^(.+) бросил кубик: (\d+)(?: \(\+(\d+)\))? = (\d+)\. Ход: (\d+) -> (\d+)\.$/, (m, a, b, c, d, e, f) => lang === "uk"
-        ? `${a} кинув кубик: ${b}${c ? ` (+${c})` : ""} = ${d}. Хід: ${e} -> ${f}.`
-        : `${a} rolled the die: ${b}${c ? ` (+${c})` : ""} = ${d}. Move: ${e} -> ${f}.`],
+      [/^(.+) бросил кубик: (\d+)(?: \(\+(\d+)\))?(?: = (\d+))?\. Ход: (\d+) -> (\d+)\.$/, (m, a, b, c, d, e, f) => {
+        const bonusPart = c ? ` (+${c})` : "";
+        const total = d || (Number(b) + Number(c || 0));
+        const rollPart = c ? `${b}${bonusPart} = ${total}` : `${b}`;
+        return lang === "uk"
+          ? `${a} кинув кубик: ${rollPart}. Хід: ${e} -> ${f}.`
+          : `${a} rolled the die: ${rollPart}. Move: ${e} -> ${f}.`;
+      }],
       [/^Ход передан: (.+)\.$/, (m, a) => lang === "uk" ? `Хід передано: ${a}.` : `Turn passed to: ${a}.`],
       [/^Отмена действия: (.+)\.$/, (m, a) => lang === "uk" ? `Скасовано дію: ${a}.` : `Undid action: ${a}.`],
       [/^Хранитель переносит (.+) на клетку (\d+) \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `Хранитель переносить ${a} на клітинку ${b} (${c} -> ${d}).` : `Keeper moves ${a} to tile ${b} (${c} -> ${d}).`],
       [/^Покупка отклонена: (.+) должен стоять на любой клетке магазина .*$/, (m, a) => lang === "uk" ? `Купівлю відхилено: ${a} має стояти на будь-якій клітинці крамниці.` : `Purchase denied: ${a} must stand on any shop tile.`],
       [/^Инвентарь полон: у (.+) заняты все (\d+) слота \(нужен свободный слот для нового типа предмета\)\.$/, (m, a, b) => lang === "uk" ? `Інвентар повний: у ${a} зайнято всі ${b} слоти (потрібен вільний слот для нового типу предмета).` : `Inventory full: ${a} has all ${b} slots occupied (a free slot is needed for a new item type).`],
+      [/^Инвентарь полон: у (.+) заняты все (\d+) слота\.$/, (m, a, b) => lang === "uk" ? `Інвентар повний: у ${a} зайнято всі ${b} слоти.` : `Inventory full: ${a} has all ${b} slots occupied.`],
+      [/^Інвентар повний: у (.+) зайнято всі (\d+) слоти\.$/, (m, a, b) => lang === "uk" ? `Інвентар повний: у ${a} зайнято всі ${b} слоти.` : `Inventory full: ${a} has all ${b} slots occupied.`],
       [/^Лавка реликвий \(клетка (\d+)\): у (.+) не хватает золота для покупки "(.+)" \((\d+)💰\)\.$/, (m, a, b, c, d) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): у ${b} не вистачає золота для купівлі "${c}" (${d}💰).` : `Relic shop (tile ${a}): ${b} lacks gold to buy "${c}" (${d}💰).`],
       [/^Лавка реликвий \(клетка (\d+)\): (.+) получает "(.+)" за (\d+)💰 и тут же высвобождает \+(\d+)💰 энергии\.$/, (m, a, b, c, d, e) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): ${b} отримує "${c}" за ${d}💰 і одразу вивільняє +${e}💰 енергії.` : `Relic shop (tile ${a}): ${b} gets "${c}" for ${d}💰 and immediately releases +${e}💰 energy.`],
       [/^Лавка реликвий \(клетка (\d+)\): (.+) получает "(.+)" за (\d+)💰\.$/, (m, a, b, c, d) => lang === "uk" ? `Крамниця реліквій (клітинка ${a}): ${b} отримує "${c}" за ${d}💰.` : `Relic shop (tile ${a}): ${b} gets "${c}" for ${d}💰.`],
