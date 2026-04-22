@@ -1,4 +1,45 @@
-﻿const CONFIG = window.GAME_CONFIG;
+let CONFIG = window.GAME_CONFIG;
+const CONFIG_OVERRIDES_STORAGE_KEY = "alchemist_dungeon_config_overrides_v1";
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function loadStoredConfigOverrides() {
+  try {
+    const raw = window.localStorage.getItem(CONFIG_OVERRIDES_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return isPlainObject(parsed) ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function mergeConfig(baseValue, overrideValue) {
+  if (Array.isArray(baseValue) && Array.isArray(overrideValue)) {
+    return overrideValue.map((item) => {
+      if (Array.isArray(item)) return mergeConfig([], item);
+      if (isPlainObject(item)) return mergeConfig({}, item);
+      return item;
+    });
+  }
+  if (isPlainObject(baseValue) && isPlainObject(overrideValue)) {
+    const result = { ...baseValue };
+    Object.keys(overrideValue).forEach((key) => {
+      result[key] = key in baseValue ? mergeConfig(baseValue[key], overrideValue[key]) : overrideValue[key];
+    });
+    return result;
+  }
+  return overrideValue !== undefined ? overrideValue : baseValue;
+}
+
+const storedConfigOverrides = loadStoredConfigOverrides();
+if (storedConfigOverrides) {
+  window.GAME_CONFIG = mergeConfig(window.GAME_CONFIG || {}, storedConfigOverrides);
+}
+
+CONFIG = window.GAME_CONFIG;
     const LANGUAGE_STORAGE_KEY = CONFIG.LANGUAGE_KEY || "alchemist_dungeon_language_v1";
     const BOARD_SIZE = CONFIG.BOARD_SIZE;
     const LAST_CELL = CONFIG.LAST_CELL;
@@ -59,8 +100,26 @@ const state = {
     const settingsLauncherEl = document.getElementById("settingsLauncher");
     const settingsPanelEl = document.getElementById("settingsPanel");
     const settingsCloseBtnEl = document.getElementById("settingsCloseBtn");
+    const settingsGeneralTabBtnEl = document.getElementById("settingsGeneralTabBtn");
+    const settingsConfigTabBtnEl = document.getElementById("settingsConfigTabBtn");
     const sidePanelToggleBtnEl = document.getElementById("sidePanelToggleBtn");
     const languageSelectEl = document.getElementById("languageSelect");
+    const configBoardSizeEl = document.getElementById("configBoardSize");
+    const configPlayerMaxHpEl = document.getElementById("configPlayerMaxHp");
+    const configGoldPerMoveEl = document.getElementById("configGoldPerMove");
+    const configInventorySlotsEl = document.getElementById("configInventorySlots");
+    const configAutosaveDelayEl = document.getElementById("configAutosaveDelay");
+    const configFinishersToEndGameEl = document.getElementById("configFinishersToEndGame");
+    const configFortuneGoodChanceEl = document.getElementById("configFortuneGoodChance");
+    const configBlackMarketProfitChanceEl = document.getElementById("configBlackMarketProfitChance");
+    const configAltarShieldChanceEl = document.getElementById("configAltarShieldChance");
+    const fortuneGoodChanceValueEl = document.getElementById("fortuneGoodChanceValue");
+    const blackMarketProfitChanceValueEl = document.getElementById("blackMarketProfitChanceValue");
+    const altarShieldChanceValueEl = document.getElementById("altarShieldChanceValue");
+    const configLastCellPreviewEl = document.getElementById("configLastCellPreview");
+    const configEditorStatusEl = document.getElementById("configEditorStatus");
+    const saveConfigBtnEl = document.getElementById("saveConfigBtn");
+    const resetConfigBtnEl = document.getElementById("resetConfigBtn");
     const toastContainerEl = document.getElementById("toastContainer");
     const eventJournalLauncherEl = document.getElementById("eventJournalLauncher");
     const eventJournalEl = document.getElementById("eventJournal");
@@ -147,6 +206,8 @@ const state = {
     let lastStatsSignature = "";
     let lastInventorySignature = "";
     let deferredInstallPrompt = null;
+    const SETTINGS_TAB_KEY = "alchemist_dungeon_settings_tab_v1";
+    let settingsTab = window.localStorage.getItem(SETTINGS_TAB_KEY) === "config" ? "config" : "general";
     const LOG_DOM_LIMIT = 200;
     const MAX_LOG_ENTRIES = Math.max(LOG_DOM_LIMIT, Number(CONFIG.MAX_LOG_ENTRIES) || 1500);
     const PERF_ENABLED = (() => {
@@ -259,6 +320,131 @@ const state = {
       return TEXTS.ui?.[key] || "";
     }
 
+    function getConfigInputValue(inputEl, fallback) {
+      const raw = Number(inputEl?.value);
+      return Number.isFinite(raw) ? Math.trunc(raw) : fallback;
+    }
+
+    function clampConfigNumber(value, min, max, fallback) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return fallback;
+      return Math.min(max, Math.max(min, Math.trunc(numeric)));
+    }
+
+    function computeLastCell(boardSize) {
+      return Math.max(1, boardSize * boardSize);
+    }
+
+    function formatPercentValue(rawValue) {
+      return `${Math.round(Number(rawValue) || 0)}%`;
+    }
+
+    function refreshConfigPreview() {
+      if (!configLastCellPreviewEl) return;
+      const boardSize = clampConfigNumber(getConfigInputValue(configBoardSizeEl, CONFIG.BOARD_SIZE || 10), 5, 20, CONFIG.BOARD_SIZE || 10);
+      configLastCellPreviewEl.textContent = String(computeLastCell(boardSize));
+    }
+
+    function syncConfigRangeLabels() {
+      if (fortuneGoodChanceValueEl) fortuneGoodChanceValueEl.textContent = formatPercentValue(configFortuneGoodChanceEl?.value ?? 0);
+      if (blackMarketProfitChanceValueEl) blackMarketProfitChanceValueEl.textContent = formatPercentValue(configBlackMarketProfitChanceEl?.value ?? 0);
+      if (altarShieldChanceValueEl) altarShieldChanceValueEl.textContent = formatPercentValue(configAltarShieldChanceEl?.value ?? 0);
+    }
+
+    function syncSettingsTab() {
+      const panels = settingsPanelEl?.querySelectorAll("[data-settings-tab-panel]") || [];
+      panels.forEach((panel) => {
+        panel.classList.toggle("is-hidden", panel.dataset.settingsTabPanel !== settingsTab);
+      });
+      const tabButtons = [settingsGeneralTabBtnEl, settingsConfigTabBtnEl];
+      tabButtons.forEach((buttonEl) => {
+        if (!buttonEl) return;
+        const active = buttonEl.dataset.settingsTab === settingsTab;
+        buttonEl.classList.toggle("is-active", active);
+        buttonEl.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      try {
+        window.localStorage.setItem(SETTINGS_TAB_KEY, settingsTab);
+      } catch (_) {
+        // ignore tab persistence issues
+      }
+    }
+
+    function setSettingsTab(nextTab) {
+      settingsTab = nextTab === "config" ? "config" : "general";
+      syncSettingsTab();
+    }
+
+    function setConfigEditorStatus(message, kind = "info") {
+      if (!configEditorStatusEl) return;
+      configEditorStatusEl.textContent = message || "";
+      configEditorStatusEl.dataset.kind = kind;
+    }
+
+    function syncConfigMenu() {
+      if (configBoardSizeEl) configBoardSizeEl.value = String(CONFIG.BOARD_SIZE || 10);
+      if (configPlayerMaxHpEl) configPlayerMaxHpEl.value = String(CONFIG.PLAYER_MAX_HP || 100);
+      if (configGoldPerMoveEl) configGoldPerMoveEl.value = String(CONFIG.GOLD_PER_MOVE || 10);
+      if (configInventorySlotsEl) configInventorySlotsEl.value = String(CONFIG.INVENTORY_SLOT_LIMIT || 4);
+      if (configAutosaveDelayEl) configAutosaveDelayEl.value = String(CONFIG.AUTOSAVE_DELAY_MS || 900);
+      if (configFinishersToEndGameEl) configFinishersToEndGameEl.value = String(CONFIG.FINISHERS_TO_END_GAME || 1);
+      if (configFortuneGoodChanceEl) configFortuneGoodChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100));
+      if (configBlackMarketProfitChanceEl) configBlackMarketProfitChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100));
+      if (configAltarShieldChanceEl) configAltarShieldChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100));
+      refreshConfigPreview();
+      syncConfigRangeLabels();
+      setConfigEditorStatus("");
+    }
+
+    function saveConfigOverridesFromMenu() {
+      const boardSize = clampConfigNumber(getConfigInputValue(configBoardSizeEl, CONFIG.BOARD_SIZE || 10), 5, 20, CONFIG.BOARD_SIZE || 10);
+      const playerMaxHp = clampConfigNumber(getConfigInputValue(configPlayerMaxHpEl, CONFIG.PLAYER_MAX_HP || 100), 10, 999, CONFIG.PLAYER_MAX_HP || 100);
+      const goldPerMove = clampConfigNumber(getConfigInputValue(configGoldPerMoveEl, CONFIG.GOLD_PER_MOVE || 10), 1, 100, CONFIG.GOLD_PER_MOVE || 10);
+      const inventorySlots = clampConfigNumber(getConfigInputValue(configInventorySlotsEl, CONFIG.INVENTORY_SLOT_LIMIT || 4), 1, 10, CONFIG.INVENTORY_SLOT_LIMIT || 4);
+      const autosaveDelay = clampConfigNumber(getConfigInputValue(configAutosaveDelayEl, CONFIG.AUTOSAVE_DELAY_MS || 900), 100, 5000, CONFIG.AUTOSAVE_DELAY_MS || 900);
+      const finishers = clampConfigNumber(getConfigInputValue(configFinishersToEndGameEl, CONFIG.FINISHERS_TO_END_GAME || 1), 1, 10, CONFIG.FINISHERS_TO_END_GAME || 1);
+      const fortuneGoodChance = clampConfigNumber(getConfigInputValue(configFortuneGoodChanceEl, Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100)) / 100;
+      const blackMarketProfitChance = clampConfigNumber(getConfigInputValue(configBlackMarketProfitChanceEl, Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100)) / 100;
+      const altarShieldChance = clampConfigNumber(getConfigInputValue(configAltarShieldChanceEl, Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100)) / 100;
+      const overrides = {
+        BOARD_SIZE: boardSize,
+        LAST_CELL: computeLastCell(boardSize),
+        PLAYER_MAX_HP: playerMaxHp,
+        GOLD_PER_MOVE: goldPerMove,
+        INVENTORY_SLOT_LIMIT: inventorySlots,
+        AUTOSAVE_DELAY_MS: autosaveDelay,
+        FINISHERS_TO_END_GAME: finishers,
+        CHANCES: {
+          fortune: { omenGoodChance: fortuneGoodChance },
+          blackMarket: { profitMax: blackMarketProfitChance },
+          altar: { shieldMax: altarShieldChance }
+        }
+      };
+      try {
+        window.localStorage.setItem(CONFIG_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+      } catch (_) {
+        setConfigEditorStatus(t("ui.configSaveFailed"), "error");
+        showLogToast(t("ui.configSaveFailed"));
+        return;
+      }
+      setConfigEditorStatus(t("ui.configSaved"), "success");
+      showLogToast(t("ui.configSaved"));
+      window.setTimeout(() => window.location.reload(), 500);
+    }
+
+    function resetConfigOverrides() {
+      try {
+        window.localStorage.removeItem(CONFIG_OVERRIDES_STORAGE_KEY);
+      } catch (_) {
+        setConfigEditorStatus(t("ui.configResetFailed"), "error");
+        showLogToast(t("ui.configResetFailed"));
+        return;
+      }
+      setConfigEditorStatus(t("ui.configResetDone"), "success");
+      showLogToast(t("ui.configResetDone"));
+      window.setTimeout(() => window.location.reload(), 500);
+    }
+
     function applyStaticTranslations() {
       document.documentElement.lang = currentLanguage;
       if (gameTitleEl) gameTitleEl.textContent = t("app.title");
@@ -336,6 +522,7 @@ const state = {
       renderPlayerSelect();
       renderPlayersMenu();
       renderLogWindow();
+      syncConfigMenu();
     }
 
     function setLanguage(nextLanguage) {
@@ -597,6 +784,7 @@ const state = {
         settingsLauncherEl.classList.toggle("is-hidden", isOpen);
         settingsLauncherEl.setAttribute("aria-expanded", isOpen ? "true" : "false");
       }
+      if (isOpen) syncSettingsTab();
     }
 
     function markPlayerDirty(playerId, patch = {}) {
@@ -950,7 +1138,7 @@ const state = {
     function renderShopMenuItems() {
       shopItemsListEl.innerHTML = "";
       SHOP_ITEMS.forEach((item) => {
-        const info = SHOP_ITEM_META[item.id] || { icon: "💠" };
+        const info = SHOP_ITEM_META[item.id] || { icon: "??" };
         const itemName = getShopItemName(item);
         const itemDesc = getShopItemDesc(item, currentLanguage);
         const slot = document.createElement("div");
@@ -958,7 +1146,7 @@ const state = {
         slot.dataset.shopItemId = item.id;
         slot.innerHTML = `
           <span class="item-icon">${info.icon}</span>
-          <span class="slot-price">${item.price}💰</span>
+          <span class="slot-price">${item.price}??</span>
           <div class="item-tooltip"><b>${itemName}</b><br>${itemDesc}</div>
         `;
         shopItemsListEl.appendChild(slot);
@@ -1100,8 +1288,8 @@ const state = {
       }
 
       shopPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ❤️</span>
-        <span id="shopBuyerGold" class="player-gold">${player.gold} 💰</span>
+        <span class="player-gold">${player.hp} ??</span>
+        <span id="shopBuyerGold" class="player-gold">${player.gold} ??</span>
       `;
       const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: false });
       shopPlayerInventoryEl.innerHTML = slotsHtml;
@@ -1124,8 +1312,8 @@ const state = {
         fortuneTextEl.textContent = t("context.fortuneSubtitle");
       }
       fortunePlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ❤️</span>
-        <span class="player-gold">${player.gold} 💰</span>
+        <span class="player-gold">${player.hp} ??</span>
+        <span class="player-gold">${player.gold} ??</span>
       `;
       fortuneActionBtnEl.disabled = state.rolling || !onFortuneCell || !canPay || Boolean(player.fortuneQuest);
     }
@@ -1229,7 +1417,7 @@ const state = {
 
       updatePlayerInState(player.id, result.player);
       if (result.reward === "gold") {
-        logEvent(`${player.name} receives a prophecy reward of +${result.gold}💰.`);
+        logEvent(`${player.name} receives a prophecy reward of +${result.gold}??.`);
         return;
       }
       if (result.reward === "shield") {
@@ -1255,8 +1443,8 @@ const state = {
       const onBlackMarket = hasCellType(player.position, "blackMarket");
       const canPay = player.gold >= SERVICE_COSTS.blackMarket;
       blackMarketPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ❤️</span>
-        <span class="player-gold">${player.gold} 💰</span>
+        <span class="player-gold">${player.hp} ??</span>
+        <span class="player-gold">${player.gold} ??</span>
       `;
       blackMarketActionBtnEl.disabled = state.rolling || !onBlackMarket || !canPay;
     }
@@ -1271,8 +1459,8 @@ const state = {
       const onAltar = hasCellType(player.position, "altar");
       const canPay = player.gold >= SERVICE_COSTS.altar;
       altarPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${player.hp} ❤️</span>
-        <span class="player-gold">${player.gold} 💰</span>
+        <span class="player-gold">${player.hp} ??</span>
+        <span class="player-gold">${player.gold} ??</span>
       `;
       altarActionBtnEl.disabled = state.rolling || !onAltar || !canPay;
     }
@@ -2000,7 +2188,7 @@ const state = {
         quest
       });
       if (!result.ok && result.reason === "not_enough_gold") {
-        logEvent(`${player.name} approaches the Oracle ${getCellTypeIcon("fortuneTeller")}, but lacks ${fortuneCost}💰 for the ritual.`);
+        logEvent(`${player.name} approaches the Oracle ${getCellTypeIcon("fortuneTeller")}, but lacks ${fortuneCost}?? for the ritual.`);
         return false;
       }
       if (!result.ok && result.reason === "already_has_quest") {
@@ -2012,7 +2200,7 @@ const state = {
       }
       updatePlayerInState(player.id, result.player);
       animateContextGoldDelta(-fortuneCost);
-      logEvent(`${player.name} pays ${fortuneCost}💰 to the Oracle ${getCellTypeIcon("fortuneTeller")} and receives the sign: ${quest.omenLabel}.`);
+      logEvent(`${player.name} pays ${fortuneCost}?? to the Oracle ${getCellTypeIcon("fortuneTeller")} and receives the sign: ${quest.omenLabel}.`);
       logEvent(`Oracle wording for ${player.name}: ${getFortuneQuestConditionText(quest)}`);
       return false;
     }
@@ -2029,7 +2217,7 @@ const state = {
         maxLossGold: REWARDS.blackMarketMaxLossGold
       });
       if (!result.ok && result.reason === "not_enough_gold") {
-        logEvent(`${player.name} enters the Shadow market ${getCellTypeIcon("blackMarket")}, but lacks ${fee}💰 for the deal.`);
+        logEvent(`${player.name} enters the Shadow market ${getCellTypeIcon("blackMarket")}, but lacks ${fee}?? for the deal.`);
         return;
       }
       if (!result.ok) return;
@@ -2038,12 +2226,12 @@ const state = {
       animateContextGoldDelta(-fee);
       if (result.outcome === "profit") {
         animateContextGoldDelta(REWARDS.blackMarketProfitGold);
-        logEvent(`${player.name} pays ${fee}💰 at the Shadow market ${getCellTypeIcon("blackMarket")} and lands a profitable deal: +${REWARDS.blackMarketProfitGold}💰.`);
+        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")} and lands a profitable deal: +${REWARDS.blackMarketProfitGold}??.`);
       } else if (result.outcome === "loss") {
         animateContextGoldDelta(-result.loss);
-        logEvent(`${player.name} pays ${fee}💰 at the Shadow market ${getCellTypeIcon("blackMarket")}, but gets tricked and loses another ${result.loss}💰.`);
+        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")}, but gets tricked and loses another ${result.loss}??.`);
       } else if (result.outcome === "shield") {
-        logEvent(`${player.name} pays ${fee}💰 at the Shadow market ${getCellTypeIcon("blackMarket")} and gets a rare trophy: +1 Protection Seal.`);
+        logEvent(`${player.name} pays ${fee}?? at the Shadow market ${getCellTypeIcon("blackMarket")} and gets a rare trophy: +1 Protection Seal.`);
       }
     }
 
@@ -2062,14 +2250,14 @@ const state = {
       animateContextGoldDelta(result.delta);
 
       if (result.outcome === "shield") {
-        logEvent(`${player.name} offers ${tribute}💰 at the Altar ${getCellTypeIcon("altar")} and receives a blessing: +1 Protection Seal.`);
+        logEvent(`${player.name} offers ${tribute}?? at the Altar ${getCellTypeIcon("altar")} and receives a blessing: +1 Protection Seal.`);
         return;
       }
       if (result.outcome === "boots") {
-        logEvent(`${player.name} offers ${tribute}💰 at the Altar ${getCellTypeIcon("altar")} and receives the gift of the path: +1 Ritual Greaves.`);
+        logEvent(`${player.name} offers ${tribute}?? at the Altar ${getCellTypeIcon("altar")} and receives the gift of the path: +1 Ritual Greaves.`);
         return;
       }
-      logEvent(`${player.name} tries to address the Altar ${getCellTypeIcon("altar")} without tribute and loses ${result.penalty}💰.`);
+      logEvent(`${player.name} tries to address the Altar ${getCellTypeIcon("altar")} without tribute and loses ${result.penalty}??.`);
     }
 
     function closeInventoryOverlay() {
@@ -2137,8 +2325,8 @@ const state = {
       const effectsHtml = buildEffectsPanelHtml(player);
 
       inventoryNameEl.textContent = player.name || t("ui.inventoryName");
-      if (inventoryHpEl) inventoryHpEl.textContent = `${player.hp} ❤️`;
-      inventoryGoldEl.textContent = `${player.gold} 💰`;
+      if (inventoryHpEl) inventoryHpEl.textContent = `${player.hp} ??`;
+      inventoryGoldEl.textContent = `${player.gold} ??`;
       inventoryBodyEl.innerHTML = `
         <div class="inventory-slots">${slotsHtml}</div>
         ${effectsHtml}
@@ -2172,7 +2360,7 @@ const state = {
         player.luckCharm -= 1;
         player.gold += REWARDS.luckCharmGold;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} opens the Charm of favor and receives +${REWARDS.luckCharmGold}💰.`);
+        logEvent(`${player.name} opens the Charm of favor and receives +${REWARDS.luckCharmGold}??.`);
         queueRenderFromDirty({ autosave: true });
         return;
       }
@@ -2209,7 +2397,7 @@ const state = {
         player.alchemyCrystal -= 1;
         player.gold += REWARDS.alchemyCrystalUseGold;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} shatters a Blood shard and receives +${REWARDS.alchemyCrystalUseGold}💰.`);
+        logEvent(`${player.name} shatters a Blood shard and receives +${REWARDS.alchemyCrystalUseGold}??.`);
         queueRenderFromDirty({ autosave: true });
         return;
       }
@@ -2308,7 +2496,7 @@ const state = {
           ? t("ui.finishStatus", { order: player.finishOrder || "?" })
           : "";
         const tileLabel = t("ui.tile");
-        selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${player.hp} ❤️</span>, ${player.gold}💰${statusText})</span>`;
+        selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${player.hp} ??</span>, ${player.gold}??${statusText})</span>`;
         removeBtnEl.dataset.removePlayerId = player.id;
 
         fragment.appendChild(rowEl);
@@ -2454,8 +2642,8 @@ const state = {
         <div class="player-header">
           <span class="player-name">${player.name}</span>
           <span class="player-meta">
-            <span class="player-gold">${player.hp} ❤️</span>
-            <span class="player-gold">${player.gold} 💰</span>
+            <span class="player-gold">${player.hp} ??</span>
+            <span class="player-gold">${player.gold} ??</span>
           </span>
         </div>
         <div><strong>${t("ui.inventoryTitle")}:</strong></div>
@@ -3084,7 +3272,7 @@ const state = {
       }
 
       if (player.gold < item.price) {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${item.price}💰).`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${item.price}??).`);
         UIEffects.pulseClass(sourceEl, "shake", 400);
         const goldEl = document.getElementById("shopBuyerGold");
         UIEffects.pulseClass(goldEl, "shake", 400);
@@ -3107,9 +3295,9 @@ const state = {
       UIEffects.popGoldAtElement(goldEl, -item.price);
 
       if (action === "alchemyCrystal") {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}💰 and immediately releases +${REWARDS.alchemyCrystalPurchaseBonusGold}💰 energy.`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}?? and immediately releases +${REWARDS.alchemyCrystalPurchaseBonusGold}?? energy.`);
       } else {
-        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}💰.`);
+        logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${item.price}??.`);
       }
 
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
@@ -3160,7 +3348,7 @@ const state = {
 
       pushHistory(`Sell at shop: ${getShopItemName(item)}`);
       updatePlayerInState(player.id, sell.player);
-      logEvent(`Relic shop (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${sellPrice}💰.`);
+      logEvent(`Relic shop (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${sellPrice}??.`);
 
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
 
@@ -3186,6 +3374,26 @@ const state = {
       }
       if (sidePanelToggleBtnEl) {
         sidePanelToggleBtnEl.addEventListener("click", () => setSidePanelLeft(!sidePanelLeft));
+      }
+      if (saveConfigBtnEl) {
+        saveConfigBtnEl.addEventListener("click", saveConfigOverridesFromMenu);
+      }
+      if (resetConfigBtnEl) {
+        resetConfigBtnEl.addEventListener("click", resetConfigOverrides);
+      }
+      if (configBoardSizeEl) {
+        configBoardSizeEl.addEventListener("input", () => refreshConfigPreview());
+      }
+      [configFortuneGoodChanceEl, configBlackMarketProfitChanceEl, configAltarShieldChanceEl].forEach((inputEl) => {
+        if (inputEl) {
+          inputEl.addEventListener("input", () => syncConfigRangeLabels());
+        }
+      });
+      if (settingsGeneralTabBtnEl) {
+        settingsGeneralTabBtnEl.addEventListener("click", () => setSettingsTab("general"));
+      }
+      if (settingsConfigTabBtnEl) {
+        settingsConfigTabBtnEl.addEventListener("click", () => setSettingsTab("config"));
       }
       addPlayerBtnEl.addEventListener("click", () => {
         Actions.addPlayerByName(playerNameEl.value);
@@ -3242,7 +3450,7 @@ const state = {
         withSelectedPlayer((player) => {
           pushHistory("Add gold");
           player.gold += 50;
-          logEvent(`Keeper grants ${player.name} +50💰 (total: ${player.gold}).`);
+          logEvent(`Keeper grants ${player.name} +50?? (total: ${player.gold}).`);
         });
       });
 
@@ -3250,7 +3458,7 @@ const state = {
         withSelectedPlayer((player) => {
           pushHistory("Remove gold");
           player.gold = Math.max(0, player.gold - 50);
-          logEvent(`Keeper takes 50💰 from ${player.name} (total: ${player.gold}).`);
+          logEvent(`Keeper takes 50?? from ${player.name} (total: ${player.gold}).`);
         });
       });
 
@@ -3448,6 +3656,8 @@ const state = {
       syncSidePanelPosition();
       syncInstallButton();
       applyStaticTranslations();
+      syncSettingsTab();
+      syncConfigMenu();
       setSettingsPanelOpen(false);
       closeLogPanel();
       renderLogWindow();
@@ -3468,3 +3678,6 @@ const state = {
     }
 
     init();
+
+
+

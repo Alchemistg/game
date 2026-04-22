@@ -1277,10 +1277,16 @@
 
     .settings-header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
       margin-bottom: 12px;
+    }
+
+    .settings-header-main {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
     }
 
     .settings-header h2 {
@@ -1288,10 +1294,141 @@
       font-size: 1rem;
     }
 
+    .settings-tabs {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .settings-tab {
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(200, 167, 108, 0.16);
+      background: rgba(22, 24, 30, 0.9);
+      color: #d9cfbf;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .settings-tab.is-active {
+      border-color: rgba(217, 177, 76, 0.45);
+      background: rgba(60, 47, 20, 0.9);
+      color: #f4e3b7;
+    }
+
     .settings-section {
       display: grid;
       gap: 6px;
       margin-bottom: 12px;
+    }
+
+    .settings-section.is-hidden {
+      display: none;
+    }
+
+    .settings-config-section {
+      gap: 10px;
+    }
+
+    .config-menu-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #f0e2cb;
+    }
+
+    .config-menu-hint {
+      font-size: 0.76rem;
+      color: rgba(232, 220, 190, 0.7);
+    }
+
+    .config-field {
+      display: grid;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #e8dcc0;
+    }
+
+    .config-field input {
+      width: 100%;
+    }
+
+    .config-field input:focus {
+      border-color: rgba(217, 177, 76, 0.45);
+      box-shadow: 0 0 0 2px rgba(217, 177, 76, 0.14);
+    }
+
+    .config-menu-summary {
+      font-size: 0.76rem;
+      color: rgba(232, 220, 190, 0.74);
+    }
+
+    .config-menu-preview {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(200, 167, 108, 0.14);
+      background: rgba(18, 22, 28, 0.8);
+      color: #f7f2e8;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .config-balance-title {
+      margin-top: 4px;
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: #f0e2cb;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .config-range-field {
+      display: grid;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #e8dcc0;
+    }
+
+    .config-range-field input[type="range"] {
+      width: 100%;
+      min-height: 18px;
+      accent-color: #d9b14c;
+    }
+
+    .config-range-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .config-range-value {
+      color: #f4e3b7;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .config-editor-status {
+      min-height: 1em;
+      font-size: 0.76rem;
+      color: rgba(232, 220, 190, 0.78);
+    }
+
+    .config-editor-status[data-kind="error"] {
+      color: #ff9b9b;
+    }
+
+    .config-editor-status[data-kind="success"] {
+      color: #9dffba;
+    }
+
+    .config-editor-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
 
     .settings-actions {
@@ -1590,6 +1727,10 @@
 
       h2 {
         font-size: 0.95rem;
+      }
+
+      .config-editor-actions {
+        grid-template-columns: 1fr;
       }
 
       .tile-context,

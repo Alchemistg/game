@@ -95,16 +95,79 @@
   <button id="settingsLauncher" class="settings-launcher" type="button" aria-controls="settingsPanel" data-i18n="ui.settingsLauncher">⚙</button>
   <aside id="settingsPanel" class="settings-panel is-hidden" aria-label="Настройки">
     <div class="settings-header">
-      <h2 data-i18n="ui.settingsTitle">Настройки</h2>
+      <div class="settings-header-main">
+        <h2 data-i18n="ui.settingsTitle">Настройки</h2>
+        <div class="settings-tabs" role="tablist" aria-label="Разделы настроек">
+          <button id="settingsGeneralTabBtn" class="settings-tab is-active" type="button" role="tab" aria-selected="true" data-settings-tab="general" data-i18n="ui.settingsTabGeneral">Настройки</button>
+          <button id="settingsConfigTabBtn" class="settings-tab" type="button" role="tab" aria-selected="false" data-settings-tab="config" data-i18n="ui.settingsTabConfig">Конфиг</button>
+        </div>
+      </div>
       <button id="settingsCloseBtn" class="settings-close modal-close-btn" type="button" data-i18n="ui.settingsClose" aria-label="Закрыть">×</button>
     </div>
-    <div class="settings-section">
+    <div class="settings-section" data-settings-tab-panel="general">
       <label for="languageSelect" data-i18n="app.languageLabel">Язык</label>
       <select id="languageSelect" aria-label="Язык">
         <option value="ru">Русский</option>
         <option value="en">English</option>
         <option value="uk">Українська</option>
       </select>
+    </div>
+    <div class="settings-section settings-config-section" data-settings-tab-panel="config">
+      <div class="config-menu-title" data-i18n="ui.configMenuTitle">Настройки конфига</div>
+      <div class="config-menu-hint" data-i18n="ui.configMenuHint">Изменения применятся после перезагрузки.</div>
+      <label class="config-field">
+        <span data-i18n="ui.configBoardSize">Размер поля</span>
+        <input id="configBoardSize" type="number" min="5" max="20" step="1" />
+      </label>
+      <label class="config-field">
+        <span data-i18n="ui.configPlayerMaxHp">Максимум HP</span>
+        <input id="configPlayerMaxHp" type="number" min="10" max="999" step="1" />
+      </label>
+      <label class="config-field">
+        <span data-i18n="ui.configGoldPerMove">Золото за ход</span>
+        <input id="configGoldPerMove" type="number" min="1" max="100" step="1" />
+      </label>
+      <label class="config-field">
+        <span data-i18n="ui.configInventorySlots">Слоты инвентаря</span>
+        <input id="configInventorySlots" type="number" min="1" max="10" step="1" />
+      </label>
+      <label class="config-field">
+        <span data-i18n="ui.configAutosaveDelay">Автосохранение, мс</span>
+        <input id="configAutosaveDelay" type="number" min="100" max="5000" step="50" />
+      </label>
+      <label class="config-field">
+        <span data-i18n="ui.configFinishersToEndGame">Финишеров для конца игры</span>
+        <input id="configFinishersToEndGame" type="number" min="1" max="10" step="1" />
+      </label>
+      <div class="config-balance-title" data-i18n="ui.configBalanceTitle">Баланс</div>
+      <label class="config-range-field">
+        <div class="config-range-label">
+          <span data-i18n="ui.configFortuneGoodChance">Хороший знак</span>
+          <span id="fortuneGoodChanceValue" class="config-range-value"></span>
+        </div>
+        <input id="configFortuneGoodChance" type="range" min="0" max="100" step="1" />
+      </label>
+      <label class="config-range-field">
+        <div class="config-range-label">
+          <span data-i18n="ui.configBlackMarketProfitChance">Прибыльный рынок</span>
+          <span id="blackMarketProfitChanceValue" class="config-range-value"></span>
+        </div>
+        <input id="configBlackMarketProfitChance" type="range" min="0" max="100" step="1" />
+      </label>
+      <label class="config-range-field">
+        <div class="config-range-label">
+          <span data-i18n="ui.configAltarShieldChance">Печать с алтаря</span>
+          <span id="altarShieldChanceValue" class="config-range-value"></span>
+        </div>
+        <input id="configAltarShieldChance" type="range" min="0" max="100" step="1" />
+      </label>
+      <div class="config-menu-summary" data-i18n="ui.configLastCellHint">Последняя клетка обновится автоматически.</div>
+      <div id="configLastCellPreview" class="config-menu-preview" aria-live="polite"></div>
+      <div id="configEditorStatus" class="config-editor-status" aria-live="polite"></div>
+      <div class="config-editor-actions">
+        <button id="saveConfigBtn" type="button" data-i18n="ui.configSaveBtn">Применить настройки</button>
+        <button id="resetConfigBtn" type="button" data-i18n="ui.configResetBtn">Сбросить к дефолту</button>
+      </div>
     </div>
     <div class="settings-actions">
       <button id="saveGameBtn" data-i18n="ui.saveBtn">Сохранить печать</button>
