@@ -5,7 +5,7 @@
     ru: {
       app: {
         title: "Катакомбы Культа",
-        languageLabel: "Язык",
+        languageLabel: "\u042f\u0437\u044b\u043a",
         languageRu: "Русский",
         languageEn: "English",
         languageUk: "Українська"
@@ -71,7 +71,8 @@
         undoBtn: "Отменить ритуал",
         saveBtn: "Сохранить печать",
         loadBtn: "Восстановить печать",
-        newGameBtn: "Новый обряд",
+        newGameBtn: "Новая игра",
+        fullResetToggle: "Сбросить всё",
         settingsLauncher: "⚙",
         settingsTitle: "Настройки",
         settingsClose: "×",
@@ -106,7 +107,8 @@
         activeEffectsTitle: "Эффекты",
         activeEffectsNone: "Активных эффектов нет.",
         inventoryTitle: "Инвентарь",
-        confirmReset: "Сбросить текущую партию и начать новую игру?",
+        confirmReset: "Начать новую игру с теми же игроками и новой картой?",
+        confirmFullReset: "Полностью сбросить игру, игроков и карту?",
         removePlayer: "Удалить игрока",
         tile: "клетка",
         finishStatus: ", Святилище #{order}",
@@ -126,7 +128,8 @@
         saveInvalidFormat: "Ошибка загрузки: поврежденный формат сохранения.",
         saveInvalidData: "Ошибка загрузки: некорректные данные сохранения.",
         saveLoaded: "Сохранение загружено.",
-        newGameStarted: "Новая игра начата. Предыдущее сохранение сброшено.",
+        newGameStarted: "Новая игра начата. Игроки сохранены, карта сгенерирована заново.",
+        fullResetDone: "Игра полностью сброшена.",
         noSelectedPlayer: "Сначала выберите активного игрока.",
         noBuyPlayer: "Покупка недоступна: на клетке магазина нет выбранного игрока.",
         noFortunePlayer: "Гадание недоступно: у Гадалки нет выбранного игрока.",
@@ -239,7 +242,8 @@
         undoBtn: "Undo ritual",
         saveBtn: "Save seal",
         loadBtn: "Restore seal",
-        newGameBtn: "New ritual",
+        newGameBtn: "New game",
+        fullResetToggle: "Reset all",
         settingsLauncher: "⚙",
         settingsTitle: "Settings",
         settingsClose: "×",
@@ -274,7 +278,8 @@
         activeEffectsTitle: "Effects",
         activeEffectsNone: "No active effects.",
         inventoryTitle: "Inventory",
-        confirmReset: "Reset the current run and start a new game?",
+        confirmReset: "Start a new game with the same players and a fresh map?",
+        confirmFullReset: "Fully reset the game, players, and map?",
         removePlayer: "Remove player",
         tile: "tile",
         finishStatus: ", Sanctuary #{order}",
@@ -294,7 +299,8 @@
         saveInvalidFormat: "Load error: corrupted save format.",
         saveInvalidData: "Load error: invalid save data.",
         saveLoaded: "Save loaded.",
-        newGameStarted: "New game started. Previous save cleared.",
+        newGameStarted: "New game started. Players kept, map regenerated.",
+        fullResetDone: "Game fully reset.",
         noSelectedPlayer: "Select an active player first.",
         noBuyPlayer: "Purchase unavailable: no selected player is on the shop tile.",
         noFortunePlayer: "Prophecy unavailable: no player is selected at the Oracle.",
@@ -341,7 +347,7 @@
     uk: {
       app: {
         title: "Катакомби Культу",
-        languageLabel: "Мова",
+        languageLabel: "\u041c\u043e\u0432\u0430",
         languageRu: "Російська",
         languageEn: "English",
         languageUk: "Українська"
@@ -407,7 +413,8 @@
         undoBtn: "Скасувати ритуал",
         saveBtn: "Зберегти печатку",
         loadBtn: "Відновити печатку",
-        newGameBtn: "Новий обряд",
+        newGameBtn: "Нова гра",
+        fullResetToggle: "Скинути все",
         settingsLauncher: "⚙",
         settingsTitle: "Налаштування",
         settingsClose: "×",
@@ -442,7 +449,8 @@
         activeEffectsTitle: "Ефекти",
         activeEffectsNone: "Активних ефектів немає.",
         inventoryTitle: "Інвентар",
-        confirmReset: "Скинути поточну партію і почати нову гру?",
+        confirmReset: "Почати нову гру з тими самими гравцями та новою картою?",
+        confirmFullReset: "Повністю скинути гру, гравців і карту?",
         removePlayer: "Видалити гравця",
         tile: "клітинка",
         finishStatus: ", Святилище #{order}",
@@ -462,7 +470,8 @@
         saveInvalidFormat: "Помилка завантаження: пошкоджений формат збереження.",
         saveInvalidData: "Помилка завантаження: некоректні дані збереження.",
         saveLoaded: "Збереження завантажено.",
-        newGameStarted: "Нову гру розпочато. Попереднє збереження скинуто.",
+        newGameStarted: "Нову гру розпочато. Гравців збережено, карту згенеровано заново.",
+        fullResetDone: "Гру повністю скинуто.",
         noSelectedPlayer: "Спершу виберіть активного гравця.",
         noBuyPlayer: "Купівля недоступна: на клітинці крамниці немає вибраного гравця.",
         noFortunePlayer: "Ворожіння недоступне: у Оракула немає вибраного гравця.",
@@ -515,7 +524,9 @@
       "Ошибка загрузки: поврежденный формат сохранения.": "Ошибка загрузки: поврежденный формат сохранения.",
       "Ошибка загрузки: некорректные данные сохранения.": "Ошибка загрузки: некорректные данные сохранения.",
       "Сохранение загружено.": "Сохранение загружено.",
-      "Новая игра начата. Предыдущее сохранение сброшено.": "Новая игра начата. Предыдущее сохранение сброшено.",
+      "Новая игра начата. Игроки сохранены, карта сгенерирована заново.": "Новая игра начата. Игроки сохранены, карта сгенерирована заново.",
+      "Сбросить всё": "Сбросить всё",
+      "Игра полностью сброшена.": "Игра полностью сброшена.",
       "Удаление недоступно во время движения игрока.": "Удаление недоступно во время движения игрока.",
       "Все игроки выбыли. Партия завершена.": "Все игроки выбыли. Партия завершена.",
       "Сначала выберите активного игрока.": "Сначала выберите активного игрока.",
@@ -530,7 +541,9 @@
       "Ошибка загрузки: поврежденный формат сохранения.": "Load error: corrupted save format.",
       "Ошибка загрузки: некорректные данные сохранения.": "Load error: invalid save data.",
       "Сохранение загружено.": "Save loaded.",
-      "Новая игра начата. Предыдущее сохранение сброшено.": "New game started. Previous save cleared.",
+      "Новая игра начата. Игроки сохранены, карта сгенерирована заново.": "New game started. Players kept, map regenerated.",
+      "Сбросить всё": "Reset all",
+      "Игра полностью сброшена.": "Game fully reset.",
       "Удаление недоступно во время движения игрока.": "Removal is unavailable while a player is moving.",
       "Все игроки выбыли. Партия завершена.": "All players are out. The match is over.",
       "Сначала выберите активного игрока.": "Select an active player first.",
@@ -545,7 +558,9 @@
       "Ошибка загрузки: поврежденный формат сохранения.": "Помилка завантаження: пошкоджений формат збереження.",
       "Ошибка загрузки: некорректные данные сохранения.": "Помилка завантаження: некоректні дані збереження.",
       "Сохранение загружено.": "Збереження завантажено.",
-      "Новая игра начата. Предыдущее сохранение сброшено.": "Нову гру розпочато. Попереднє збереження скинуто.",
+      "Новая игра начата. Игроки сохранены, карта сгенерирована заново.": "Нову гру розпочато. Гравців збережено, карту згенеровано заново.",
+      "Сбросить всё": "Скинути все",
+      "Игра полностью сброшена.": "Гру повністю скинуто.",
       "Удаление недоступно во время движения игрока.": "Видалення недоступне під час руху гравця.",
       "Все игроки выбыли. Партия завершена.": "Усі гравці вибули. Партію завершено.",
       "Сначала выберите активного игрока.": "Спершу виберіть активного гравця.",
@@ -629,6 +644,15 @@
     return t(`phases.${key}`, {}, lang);
   }
 
+  function translateEliminationReason(reason, lang) {
+    const text = String(reason || "").trim();
+    if (!text) return text;
+    if (text === "health dropped to 0") {
+      return lang === "uk" ? "здоров'я впало до 0" : "здоровье упало до 0";
+    }
+    return text;
+  }
+
   function translateLogMessage(message, lang) {
     const text = String(message || "");
     if (!text) return text;
@@ -666,7 +690,7 @@
       [/^A player named "(.+)" already exists\. Choose another name\.$/, (m, a) => lang === "uk" ? `Гравець з іменем "${a}" вже існує. Виберіть інший нік.` : `Игрок с именем "${a}" уже существует. Выберите другой ник.`],
       [/^(.+) enters the game\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `В игру вступает ${a}.`],
       [/^Player (.+) removed from the game\.$/, (m, a) => lang === "uk" ? `Гравця ${a} видалено з гри.` : `Игрок ${a} удален из игры.`],
-      [/^(.+) drops out of the match: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${b}.` : `${a} выбывает из партии: ${b}.`],
+      [/^(.+) drops out of the match: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${translateEliminationReason(b, lang)}.` : `${a} выбывает из партии: ${translateEliminationReason(b, lang)}.`],
       [/^(.+) hit a trap .* but the Protection Seal saved them! The seal dissipated\.$/, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} попал в ловушку, но Печать защиты спасает! Печать рассеялась.`],
       [/^(.+) hit a trap .* and takes (\d+) HP damage \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} попал в ловушку и получает ${b} урона по HP (${c} -> ${d}).`],
       [/^(.+) touches the Power Seal .* and surges from (\d+) -> (\d+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} касается Печати силы и рывком проходит путь ${b} -> ${c}.`],
@@ -724,7 +748,7 @@
       [/^Игрок с именем "(.+)" уже существует\. Выберите другой ник\.$/, (m, a) => lang === "uk" ? `Гравець з іменем "${a}" вже існує. Виберіть інший нік.` : `A player named "${a}" already exists. Choose another name.`],
       [/^В игру вступает (.+)\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `${a} enters the game.`],
       [/^Игрок (.+) удален из игры\.$/, (m, a) => lang === "uk" ? `Гравця ${a} видалено з гри.` : `Player ${a} removed from the game.`],
-      [/^(.+) выбывает из партии: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${b}.` : `${a} drops out of the match: ${b}.`],
+      [/^(.+) выбывает из партии: (.+)\.$/, (m, a, b) => lang === "uk" ? `${a} вибуває з партії: ${translateEliminationReason(b, lang)}.` : `${a} drops out of the match: ${translateEliminationReason(b, lang)}.`],
       [/^(.+) попал в ловушку .* но Печать защиты спасает! Печать рассеялась\.$/, (m, a) => lang === "uk" ? `${a} потрапив у пастку, але Печатка захисту рятує! Печатка розсіялася.` : `${a} hit a trap, but the Protection Seal saved them! The seal dissipated.`],
       [/^(.+) попал в ловушку .* и получает (\d+) урона по HP \((\d+) -> (\d+)\)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} hit a trap and takes ${b} HP damage (${c} -> ${d}).`],
       [/^(.+) касается Печати силы .* и рывком проходит путь (\d+) -> (\d+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} торкається Печатки сили й ривком проходить шлях ${b} -> ${c}.` : `${a} touches the Power Seal and surges from ${b} -> ${c}.`],

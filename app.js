@@ -19,6 +19,7 @@
     const SHOP_ITEM_META = CONFIG.SHOP_ITEM_META;
     const CELL_TYPE_META = CONFIG.CELL_TYPE_META;
     const CELL_TYPE_COLORS = CONFIG.CELL_TYPE_COLORS;
+    const SIDE_PANEL_LEFT_KEY = "alchemist_dungeon_side_panel_left_v1";
     const SUPPORTED_LANGUAGES = window.GAME_I18N.bundles || { ru: {} };
     const DEFAULT_LANGUAGE = window.GAME_I18N.DEFAULT_LANGUAGE || CONFIG.DEFAULT_LANGUAGE || "ru";
     let currentLanguage = window.GAME_I18N.getPreferredLanguage(LANGUAGE_STORAGE_KEY, DEFAULT_LANGUAGE);
@@ -26,6 +27,7 @@
       currentLanguage = DEFAULT_LANGUAGE;
     }
     let TEXTS = window.GAME_I18N.getBundle(currentLanguage);
+    let sidePanelLeft = window.localStorage.getItem(SIDE_PANEL_LEFT_KEY) === "1";
     const SHOP_ITEM_TO_PROP = {
       boots: "boots",
       shield: "shields",
@@ -57,6 +59,7 @@ const state = {
     const settingsLauncherEl = document.getElementById("settingsLauncher");
     const settingsPanelEl = document.getElementById("settingsPanel");
     const settingsCloseBtnEl = document.getElementById("settingsCloseBtn");
+    const sidePanelToggleBtnEl = document.getElementById("sidePanelToggleBtn");
     const languageSelectEl = document.getElementById("languageSelect");
     const toastContainerEl = document.getElementById("toastContainer");
     const eventJournalLauncherEl = document.getElementById("eventJournalLauncher");
@@ -74,6 +77,7 @@ const state = {
     const saveGameBtnEl = document.getElementById("saveGameBtn");
     const loadGameBtnEl = document.getElementById("loadGameBtn");
     const newGameBtnEl = document.getElementById("newGameBtn");
+    const fullResetToggleEl = document.getElementById("fullResetToggle");
     const activePlayerCardEl = document.getElementById("activePlayerCard");
     const playerStatsEl = document.getElementById("playerStats");
     const rollBtnEl = document.getElementById("rollBtn");
@@ -229,6 +233,26 @@ const state = {
       return window.GAME_I18N.t(path, params, lang);
     }
 
+    function getTrapLogPhrases() {
+      return {
+        hit: "hits a trap",
+        shielded: "but the Protection Seal saves them! The seal dissipates.",
+        takes: "and takes",
+        damage: "HP damage"
+      };
+    }
+
+    function formatTrapLogMessage(playerName, phaseKey, damage, hpBefore, hpAfter) {
+      const phrases = getTrapLogPhrases();
+      const phaseLabel = getPhaseLabel(phaseKey, "en");
+      return `${playerName} ${phrases.hit} ${getCellTypeIcon("trap")} (${phaseLabel}) ${phrases.takes} ${damage} ${phrases.damage} (${hpBefore} -> ${hpAfter}).`;
+    }
+
+    function formatShieldTrapLogMessage(playerName) {
+      const phrases = getTrapLogPhrases();
+      return `${playerName} ${phrases.hit} ${getCellTypeIcon("trap")}, ${phrases.shielded}`;
+    }
+
     function localizeOptionLabel(key) {
       return TEXTS.ui?.[key] || "";
     }
@@ -249,14 +273,7 @@ const state = {
       document.querySelectorAll("[data-i18n]").forEach((node) => {
         const key = node.dataset.i18n;
         if (!key) return;
-        if (key.startsWith("ui.")) {
-          node.textContent = t(key);
-          return;
-        }
-        if (key.startsWith("eventJournal.")) {
-          node.textContent = t(key);
-          return;
-        }
+        node.textContent = t(key);
       });
 
       [
@@ -284,6 +301,7 @@ const state = {
         if (options[1]) options[1].textContent = t("app.languageEn");
         if (options[2]) options[2].textContent = t("app.languageUk");
       }
+      syncSidePanelPosition();
       if (logFilterSelectEl) {
         logFilterSelectEl.value = state.logFilter || "all";
       }
@@ -324,6 +342,22 @@ const state = {
       window.GAME_I18N.setLanguageKey(LANGUAGE_STORAGE_KEY, nextLanguage);
       applyStaticTranslations();
       queueRender({ stats: true, players: true, selectedTile: true, refreshContextMenu: true, refreshInventoryOverlay: true, tokensFull: true });
+    }
+
+    function syncSidePanelPosition() {
+      document.body.classList.toggle("side-panel-left", sidePanelLeft);
+      if (sidePanelToggleBtnEl) {
+        sidePanelToggleBtnEl.textContent = sidePanelLeft ? "→" : "←";
+        sidePanelToggleBtnEl.setAttribute("aria-label", sidePanelLeft ? "Перенести панель вправо" : "Перенести панель влево");
+        sidePanelToggleBtnEl.title = sidePanelLeft ? "Перенести панель вправо" : "Перенести панель влево";
+        sidePanelToggleBtnEl.setAttribute("aria-pressed", sidePanelLeft ? "true" : "false");
+      }
+    }
+
+    function setSidePanelLeft(nextValue) {
+      sidePanelLeft = Boolean(nextValue);
+      window.localStorage.setItem(SIDE_PANEL_LEFT_KEY, sidePanelLeft ? "1" : "0");
+      syncSidePanelPosition();
     }
 
     function beginPerf(name) {
@@ -795,6 +829,101 @@ const state = {
 
     function cloneCells(cells) {
       return cells.map((cell) => ({ ...cell }));
+    }
+
+    function shuffleArray(values) {
+      const result = Array.isArray(values) ? [...values] : [];
+      for (let i = result.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+
+    function distributeCountAcrossWeights(total, weights) {
+      const safeTotal = Math.max(0, Math.floor(Number(total) || 0));
+      const safeWeights = Array.isArray(weights)
+        ? weights.map((weight) => Math.max(0, Math.floor(Number(weight) || 0)))
+        : [];
+      const weightSum = safeWeights.reduce((sum, weight) => sum + weight, 0) || 1;
+      const raw = safeWeights.map((weight) => safeTotal * weight / weightSum);
+      const counts = raw.map((value) => Math.floor(value));
+      let remaining = safeTotal - counts.reduce((sum, count) => sum + count, 0);
+      const fractions = raw
+        .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+        .sort((a, b) => b.fraction - a.fraction);
+      let cursor = 0;
+      while (remaining > 0 && fractions.length > 0) {
+        counts[fractions[cursor % fractions.length].index] += 1;
+        remaining -= 1;
+        cursor += 1;
+      }
+      return counts;
+    }
+
+    function createFreshPlayerState(player) {
+      const { maxHp } = normalizePlayerHp(player);
+      return {
+        ...player,
+        position: 1,
+        hp: maxHp,
+        maxHp,
+        gold: 0,
+        boots: 0,
+        shields: 0,
+        luckCharm: 0,
+        trapKit: 0,
+        rerollStone: 0,
+        alchemyCrystal: 0,
+        bootsActive: false,
+        fortuneQuest: null,
+        finished: false,
+        finishOrder: 0
+      };
+    }
+
+    function generateCellLayout() {
+      const layout = {
+        trap: [],
+        boost: [],
+        shop: [],
+        blackMarket: [],
+        altar: [],
+        fortuneTeller: []
+      };
+      const typeOrder = ["trap", "boost", "shop", "blackMarket", "altar", "fortuneTeller"];
+      const phaseBuckets = [
+        { key: "early", cells: shuffleArray(Array.from({ length: Math.max(0, 34 - 2 + 1) }, (_, index) => index + 2)) },
+        { key: "mid", cells: shuffleArray(Array.from({ length: Math.max(0, 69 - 35 + 1) }, (_, index) => index + 35)) },
+        { key: "late", cells: shuffleArray(Array.from({ length: Math.max(0, LAST_CELL - 1 - 70 + 1) }, (_, index) => index + 70)) }
+      ];
+      const allCandidates = shuffleArray(Array.from({ length: Math.max(0, LAST_CELL - 1 - 2 + 1) }, (_, index) => index + 2));
+      const occupied = new Set([1, LAST_CELL]);
+
+      typeOrder.forEach((type) => {
+        const targetCount = Array.isArray(CELL_LAYOUT[type]) ? CELL_LAYOUT[type].length : 0;
+        const phaseCounts = distributeCountAcrossWeights(targetCount, phaseBuckets.map((bucket) => bucket.cells.length));
+        phaseCounts.forEach((count, phaseIndex) => {
+          let placed = 0;
+          const bucket = phaseBuckets[phaseIndex];
+          for (const cellNumber of bucket.cells) {
+            if (occupied.has(cellNumber)) continue;
+            occupied.add(cellNumber);
+            layout[type].push(cellNumber);
+            placed += 1;
+            if (placed >= count) break;
+          }
+        });
+
+        while (layout[type].length < targetCount) {
+          const fallbackCell = allCandidates.find((cellNumber) => !occupied.has(cellNumber));
+          if (!fallbackCell) break;
+          occupied.add(fallbackCell);
+          layout[type].push(fallbackCell);
+        }
+      });
+
+      return layout;
     }
 
     function renderShopMenuItems() {
@@ -1374,8 +1503,49 @@ const state = {
       return true;
     }
 
+    function startNewGameWithSamePlayers() {
+      clearTimeout(autosaveTimer);
+      cancelIdle();
+      localStorage.removeItem(SAVE_KEY);
+      lastSavedSnapshotJson = "";
+      const nextPlayers = state.players.length ? state.players.map((player) => createFreshPlayerState(player)) : [];
+      dispatch({
+        type: "PATCH",
+        patch: {
+          players: nextPlayers,
+          selectedPlayerId: nextPlayers[0]?.id || "",
+          selectedCell: 1,
+          rolling: false,
+          turnIndex: 0,
+          history: [],
+          logEntries: [],
+          gameEnded: false
+        }
+      });
+      renderLogWindow();
+
+      hideTileContextMenu();
+      closeInventoryOverlay();
+      closeVictoryOverlay();
+      buildCells();
+      createBoard();
+      fullRender(false);
+      logEvent(t("ui.newGameStarted"));
+    }
+
     function resetGameWithConfirm() {
-      const confirmed = window.confirm(t("ui.confirmReset"));
+      const useFullReset = Boolean(fullResetToggleEl?.checked);
+      const confirmed = window.confirm(useFullReset ? t("ui.confirmFullReset") : t("ui.confirmReset"));
+      if (!confirmed) return;
+      if (useFullReset) {
+        resetAllGameWithConfirm(true);
+      } else {
+        startNewGameWithSamePlayers();
+      }
+    }
+
+    function resetAllGameWithConfirm(skipConfirm = false) {
+      const confirmed = skipConfirm ? true : window.confirm(t("ui.confirmFullReset"));
       if (!confirmed) return;
 
       clearTimeout(autosaveTimer);
@@ -1396,14 +1566,13 @@ const state = {
         }
       });
       renderLogWindow();
-
       hideTileContextMenu();
       closeInventoryOverlay();
       closeVictoryOverlay();
       buildCells();
       createBoard();
       fullRender(false);
-      logEvent(t("ui.newGameStarted"));
+      logEvent(t("ui.fullResetDone"));
     }
 
     function syncTurnIndexToSelected() {
@@ -1443,12 +1612,13 @@ const state = {
     }
 
     function buildCells() {
-      const traps = new Set(CELL_LAYOUT.trap || []);
-      const boosts = new Set(CELL_LAYOUT.boost || []);
-      const shops = new Set(CELL_LAYOUT.shop || []);
-      const blackMarkets = new Set(CELL_LAYOUT.blackMarket || []);
-      const altars = new Set(CELL_LAYOUT.altar || []);
-      const fortuneTellers = new Set(CELL_LAYOUT.fortuneTeller || []);
+      const layout = generateCellLayout();
+      const traps = new Set(layout.trap || []);
+      const boosts = new Set(layout.boost || []);
+      const shops = new Set(layout.shop || []);
+      const blackMarkets = new Set(layout.blackMarket || []);
+      const altars = new Set(layout.altar || []);
+      const fortuneTellers = new Set(layout.fortuneTeller || []);
 
       state.cells = Array.from({ length: LAST_CELL }, (_, i) => {
         const number = i + 1;
@@ -2684,12 +2854,12 @@ const state = {
         if (types.includes("trap")) {
           if (player.shields > 0) {
             player.shields -= 1;
-            logEvent(`${player.name} hits a trap ${getCellTypeIcon("trap")}, but the Protection Seal saves them! The seal dissipates.`);
+            logEvent(formatShieldTrapLogMessage(player.name));
           } else {
             const trapDamage = Math.max(1, Number(balance.trapDamage) || 25);
             const hpBefore = player.hp;
             player.hp = clamp(player.hp - trapDamage, 0, player.maxHp);
-            logEvent(`${player.name} hits a trap ${getCellTypeIcon("trap")} (${getPhaseLabel(balance.key)}) and takes ${trapDamage} HP damage (${hpBefore} -> ${player.hp}).`);
+            logEvent(formatTrapLogMessage(player.name, balance.key, trapDamage, hpBefore, player.hp));
             if (player.hp <= 0) {
               eliminatePlayerFromGame(player, "health dropped to 0");
               return { eliminated: true };
@@ -2990,6 +3160,9 @@ const state = {
       if (settingsCloseBtnEl) {
         settingsCloseBtnEl.addEventListener("click", () => setSettingsPanelOpen(false));
       }
+      if (sidePanelToggleBtnEl) {
+        sidePanelToggleBtnEl.addEventListener("click", () => setSidePanelLeft(!sidePanelLeft));
+      }
       addPlayerBtnEl.addEventListener("click", () => {
         Actions.addPlayerByName(playerNameEl.value);
       });
@@ -3237,6 +3410,7 @@ const state = {
       buildCells();
       createBoard();
       bindEvents();
+      syncSidePanelPosition();
       applyStaticTranslations();
       setSettingsPanelOpen(false);
       closeLogPanel();
