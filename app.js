@@ -3423,9 +3423,22 @@ const state = {
         UIEffects.popGoldAtElement(goldEl, -item.price);
 
         if (action === "alchemyCrystal") {
-          logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)} and immediately releases +${formatGold(REWARDS.alchemyCrystalPurchaseBonusGold)} energy.`);
+          logEvent(t("ui.shopBuyAlchemyCrystal", {
+            shop: getCellTypeLabel("shop"),
+            cell: player.position,
+            name: player.name,
+            item: getShopItemName(item),
+            price: formatGold(item.price),
+            bonus: formatGold(REWARDS.alchemyCrystalPurchaseBonusGold)
+          }));
         } else {
-          logEvent(`Relic shop (tile ${player.position}): ${player.name} gets "${getShopItemName(item)}" for ${formatGold(item.price)}.`);
+          logEvent(t("ui.shopBuy", {
+            shop: getCellTypeLabel("shop"),
+            cell: player.position,
+            name: player.name,
+            item: getShopItemName(item),
+            price: formatGold(item.price)
+          }));
         }
 
         queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
@@ -3574,7 +3587,13 @@ const state = {
         });
         if (!sell.ok) return;
         updatePlayerInState(player.id, sell.player);
-        logEvent(`${marketLabel} (tile ${player.position}): ${player.name} trades 1x "${getShopItemName(item)}" for +${formatGold(sellPrice)}.`);
+        logEvent(t("ui.shopSell", {
+          shop: getCellTypeLabel("shop"),
+          cell: player.position,
+          name: player.name,
+          item: getShopItemName(item),
+          gold: formatGold(sellPrice)
+        }));
 
         queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
 
