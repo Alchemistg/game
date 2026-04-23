@@ -24,7 +24,6 @@
 
     REWARDS: {
       alchemyCrystalPurchaseBonusGold: 30,
-      luckCharmGold: 40,
       alchemyCrystalUseGold: 25,
       fortuneGoldReward: 80,
       blackMarketProfitGold: 70,
@@ -61,7 +60,6 @@
 
     CELL_LAYOUT: {
       trap: [9, 17, 28, 33, 41, 52, 64, 73, 88, 96],
-      boost: [5, 14, 22, 31, 47, 58, 67, 79, 91],
       shop: [7, 19, 27, 44, 56, 69, 83, 94],
       blackMarket: [12, 36, 62, 86],
       altar: [24, 49, 74],
@@ -72,6 +70,7 @@
       { id: "boots", nameKey: "items.boots.name", descKey: "items.boots.desc", price: 80 },
       { id: "shield", nameKey: "items.shield.name", descKey: "items.shield.desc", price: 70 },
       { id: "luckCharm", nameKey: "items.luckCharm.name", descKey: "items.luckCharm.desc", price: 120 },
+      { id: "adrenaline", nameKey: "items.adrenaline.name", descKey: "items.adrenaline.desc", price: 150 },
       { id: "trapKit", nameKey: "items.trapKit.name", descKey: "items.trapKit.desc", price: 95 },
       { id: "rerollStone", nameKey: "items.rerollStone.name", descKey: "items.rerollStone.desc", price: 140 },
       { id: "alchemyCrystal", nameKey: "items.alchemyCrystal.name", descKey: "items.alchemyCrystal.desc", price: 60 }
@@ -81,6 +80,7 @@
       boots: { icon: "🥾" },
       shield: { icon: "🛡️" },
       luckCharm: { icon: "🍀" },
+      adrenaline: { icon: "🧪" },
       trapKit: { icon: "🧰" },
       rerollStone: { icon: "🎲" },
       alchemyCrystal: { icon: "💎" }

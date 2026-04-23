@@ -104,6 +104,25 @@
     applyAltarState,
     purchaseFortuneQuestState,
     clearFortuneQuestState,
-    applyFortuneRewardState
+    applyFortuneRewardState,
+    applyFortunePenaltyState
   };
+
+  function applyFortunePenaltyState(input) {
+    const player = { ...input.player, fortuneQuest: null };
+    const roll = Number(input.roll ?? Math.random());
+    const maxGoldLoss = Math.max(0, Number(input.maxGoldLoss ?? 40));
+    const maxHpDamage = Math.max(0, Number(input.maxHpDamage ?? 10));
+
+    if (roll < 0.5) {
+      const goldLoss = Math.min(maxGoldLoss, Number(player.gold) || 0);
+      player.gold -= goldLoss;
+      return { ok: true, player, penalty: "gold", goldLoss };
+    }
+
+    const hpBefore = Number(player.hp) || 0;
+    const hpDamage = Math.min(maxHpDamage, hpBefore);
+    player.hp = Math.max(0, hpBefore - hpDamage);
+    return { ok: true, player, penalty: "hp", hpDamage, hpBefore, hpAfter: player.hp };
+  }
 })(window);

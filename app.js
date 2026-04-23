@@ -73,6 +73,7 @@ CONFIG = window.GAME_CONFIG;
       boots: "boots",
       shield: "shields",
       luckCharm: "luckCharm",
+      adrenaline: "adrenaline",
       trapKit: "trapKit",
       rerollStone: "rerollStone",
       alchemyCrystal: "alchemyCrystal"
@@ -207,6 +208,7 @@ const state = {
     let autosaveIdleHandle = null;
     let lastSavedSnapshotJson = "";
     let lastStatsSignature = "";
+    let lastLogRenderedSignature = "";
     let lastInventorySignature = "";
     let deferredInstallPrompt = null;
     const SETTINGS_TAB_KEY = "alchemist_dungeon_settings_tab_v1";
@@ -228,10 +230,14 @@ const state = {
       blackMarket: false,
       altar: false
     };
+    let lastShopMenuMode = "";
     const inventorySlotsCache = new Map();
     const MAX_INVENTORY_CACHE = 180;
+    const effectsPanelCache = new Map();
+    const MAX_EFFECTS_CACHE = 180;
     let diceRotationX = -30;
     let diceRotationY = 45;
+    let autosaveDirty = false;
     const DICE_ANIMATION_MS = 1100;
     const DICE_ROTATIONS = {
       1: { x: 0, y: 0 },
@@ -696,10 +702,16 @@ const state = {
       const safeAt = Number.isFinite(Number(entry?.at)) ? Number(entry.at) : Date.now();
       const safeText = String(entry?.text || "").trim();
       if (!safeText) return "";
+      const cache = entry._formatted || null;
+      if (cache && cache.lang === currentLanguage && cache.at === safeAt && cache.text === safeText) {
+        return cache.value;
+      }
       const locale = currentLanguage === "en" ? "en-US" : currentLanguage === "uk" ? "uk-UA" : "ru-RU";
       const time = new Date(safeAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       const localizedText = window.GAME_I18N.translateLogMessage(safeText, currentLanguage);
-      return `[${time}] ${localizedText}`;
+      const value = `[${time}] ${localizedText}`;
+      entry._formatted = { lang: currentLanguage, at: safeAt, text: safeText, value };
+      return value;
     }
 
     function trimLogEntries() {
@@ -787,8 +799,19 @@ const state = {
 
     function renderLogWindow() {
       const selectedFilter = state.logFilter || "all";
-      const filtered = state.logEntries.filter((entry) => selectedFilter === "all" || entry.kind === selectedFilter);
-      const visible = filtered.slice(-LOG_DOM_LIMIT).map((entry) => formatLogEntry(entry)).filter(Boolean);
+      const lastAt = state.logEntries[state.logEntries.length - 1]?.at || 0;
+      const signature = `${currentLanguage}|${selectedFilter}|${state.logEntries.length}|${lastAt}`;
+      if (signature === lastLogRenderedSignature) return;
+      lastLogRenderedSignature = signature;
+      const visibleEntries = [];
+      for (let i = state.logEntries.length - 1; i >= 0 && visibleEntries.length < LOG_DOM_LIMIT; i -= 1) {
+        const entry = state.logEntries[i];
+        if (!entry) continue;
+        if (selectedFilter !== "all" && entry.kind !== selectedFilter) continue;
+        visibleEntries.push(entry);
+      }
+      visibleEntries.reverse();
+      const visible = visibleEntries.map((entry) => formatLogEntry(entry)).filter(Boolean);
       logBoxEl.textContent = visible.length ? `${visible.join("\n")}\n` : (state.logEntries.length ? t("eventJournal.emptyFiltered") : t("eventJournal.empty"));
       if (!eventJournalEl.classList.contains("is-hidden")) {
         logBoxEl.scrollTop = logBoxEl.scrollHeight;
@@ -930,6 +953,7 @@ const state = {
       (options.tokenPositions || []).forEach((pos) => pendingTokenPositions.add(Number(pos)));
       (options.tokenActiveIds || []).forEach((id) => pendingTokenActiveIds.add(String(id)));
       pendingAutosave = pendingAutosave || Boolean(options.autosave);
+      autosaveDirty = autosaveDirty || Boolean(options.autosave);
       if (renderFrameId !== null) return;
       renderFrameId = window.requestAnimationFrame(flushQueuedRender);
     }
@@ -1048,7 +1072,12 @@ const state = {
       const message = window.GAME_I18N.translateLogMessage(text, currentLanguage);
       appendLogEntry(text);
       showLogToast(message);
-      renderLogWindow();
+      if (!eventJournalEl.classList.contains("is-hidden")) {
+        renderLogWindow();
+      } else {
+        // Defer rebuilding the log DOM until the panel is opened.
+        lastLogRenderedSignature = "";
+      }
     }
 
     function renderPlayersOnly() {
@@ -1189,6 +1218,7 @@ const state = {
         boots: 0,
         shields: 0,
         luckCharm: 0,
+        adrenaline: 0,
         trapKit: 0,
         rerollStone: 0,
         alchemyCrystal: 0,
@@ -1202,13 +1232,12 @@ const state = {
     function generateCellLayout() {
       const layout = {
         trap: [],
-        boost: [],
         shop: [],
         blackMarket: [],
         altar: [],
         fortuneTeller: []
       };
-      const typeOrder = ["trap", "boost", "shop", "blackMarket", "altar", "fortuneTeller"];
+      const typeOrder = ["trap", "shop", "blackMarket", "altar", "fortuneTeller"];
       const phaseBuckets = [
         { key: "early", cells: shuffleArray(Array.from({ length: Math.max(0, 34 - 2 + 1) }, (_, index) => index + 2)) },
         { key: "mid", cells: shuffleArray(Array.from({ length: Math.max(0, 69 - 35 + 1) }, (_, index) => index + 35)) },
@@ -1243,9 +1272,11 @@ const state = {
       return layout;
     }
 
-    function renderShopMenuItems() {
+    function renderShopMenuItems(mode = "shop") {
       shopItemsListEl.innerHTML = "";
-      SHOP_ITEMS.forEach((item) => {
+      const isShadowMarket = mode === "blackMarket";
+      const blackMarketOnly = new Set(["adrenaline", "trapKit"]);
+      SHOP_ITEMS.filter((item) => isShadowMarket || !blackMarketOnly.has(item.id)).forEach((item) => {
         const info = SHOP_ITEM_META[item.id] || { icon: iconUnknown() };
         const itemName = getShopItemName(item);
         const itemDesc = getShopItemDesc(item, currentLanguage);
@@ -1260,11 +1291,12 @@ const state = {
         shopItemsListEl.appendChild(slot);
       });
       contextInit.shop = true;
+      lastShopMenuMode = mode;
     }
 
     function ensureContextInitialized(mode) {
-      if ((mode === "shop" || mode === "blackMarket") && !contextInit.shop) {
-        renderShopMenuItems();
+      if ((mode === "shop" || mode === "blackMarket") && (!contextInit.shop || lastShopMenuMode !== mode)) {
+        renderShopMenuItems(mode);
       }
       if (mode && contextInit[mode] === false) {
         contextInit[mode] = true;
@@ -1319,6 +1351,7 @@ const state = {
         player.boots,
         player.shields,
         player.luckCharm,
+        player.adrenaline,
         player.trapKit,
         player.rerollStone,
         player.alchemyCrystal
@@ -1328,7 +1361,8 @@ const state = {
       const itemDefs = [
         { id: "boots", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "boots")), icon: SHOP_ITEM_META.boots.icon, count: player.boots, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "boots")) },
         { id: "shields", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")), icon: SHOP_ITEM_META.shield.icon, count: player.shields, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "shield")) },
-        { id: "luckCharm", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "luckCharm")), icon: SHOP_ITEM_META.luckCharm.icon, count: player.luckCharm, usable: true, desc: t("items.luckCharm.desc") },
+        { id: "luckCharm", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "luckCharm")), icon: SHOP_ITEM_META.luckCharm.icon, count: player.luckCharm, usable: false, desc: t("items.luckCharm.desc") },
+        { id: "adrenaline", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "adrenaline")), icon: SHOP_ITEM_META.adrenaline.icon, count: player.adrenaline, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "adrenaline")) },
         { id: "trapKit", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "trapKit")), icon: SHOP_ITEM_META.trapKit.icon, count: player.trapKit, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "trapKit")) },
         { id: "rerollStone", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "rerollStone")), icon: SHOP_ITEM_META.rerollStone.icon, count: player.rerollStone, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "rerollStone")) },
         { id: "alchemyCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "alchemyCrystal")), icon: SHOP_ITEM_META.alchemyCrystal.icon, count: player.alchemyCrystal, usable: true, desc: t("items.alchemyCrystal.desc") }
@@ -1366,6 +1400,7 @@ const state = {
         player.boots,
         player.shields,
         player.luckCharm,
+        player.adrenaline,
         player.trapKit,
         player.rerollStone,
         player.alchemyCrystal
@@ -1378,6 +1413,7 @@ const state = {
         boots: player.boots,
         shield: player.shields,
         luckCharm: player.luckCharm,
+        adrenaline: player.adrenaline,
         trapKit: player.trapKit,
         rerollStone: player.rerollStone,
         alchemyCrystal: player.alchemyCrystal
@@ -1430,6 +1466,12 @@ const state = {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
+    function getLuckTalismanBonus(player) {
+      // Passive: each talisman slightly reduces odds of bad random outcomes.
+      const count = Math.max(0, Number(player?.luckCharm) || 0);
+      return clamp(count * 0.05, 0, 0.15);
+    }
+
     function animateDiceVisual(roll) {
       if (!diceCubeEl || !diceResultEl) return Promise.resolve();
       const target = DICE_ROTATIONS[roll];
@@ -1450,14 +1492,16 @@ const state = {
 
     function createFortuneQuest(player) {
       const roll = Math.random();
-      const cellTypeChoices = ["shop", "blackMarket", "altar", "fortuneTeller", "boost"];
+      const cellTypeChoices = ["shop", "blackMarket", "altar", "fortuneTeller"];
       const itemChoices = [
         { key: "boots", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "boots")) },
         { key: "shields", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")) },
         { key: "luckCharm", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "luckCharm")) },
+        { key: "adrenaline", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "adrenaline")) },
         { key: "trapKit", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "trapKit")) }
       ];
-      const omenType = Math.random() < CHANCES.fortune.omenGoodChance ? "good" : "bad";
+      const omenGoodChance = clamp(Number(CHANCES.fortune.omenGoodChance) + getLuckTalismanBonus(player), 0, 0.95);
+      const omenType = Math.random() < omenGoodChance ? "good" : "bad";
       const omenLabel = omenType === "good" ? t("ui.omenGood") : t("ui.omenBad");
 
       if (roll < CHANCES.fortune.questType.reachCellMax) {
@@ -1514,6 +1558,30 @@ const state = {
     }
 
     function resolveFortuneQuestReward(player, quest) {
+      if (quest?.omenType === "bad") {
+        const maxGoldLoss = Math.max(15, Math.round(REWARDS.fortuneGoldReward * 0.5));
+        const maxHpDamage = Math.max(6, Math.round((player.maxHp || PLAYER_MAX_HP || 100) * 0.1));
+        const result = FortuneActions.applyFortunePenaltyState({
+          player,
+          roll: Math.random(),
+          maxGoldLoss,
+          maxHpDamage
+        });
+        if (!result.ok) return;
+
+        updatePlayerInState(player.id, result.player);
+        if (result.penalty === "gold") {
+          logEvent(t("ui.prophecyBadGold", { name: player.name, loss: formatGold(result.goldLoss) }));
+          return;
+        }
+
+        logEvent(t("ui.prophecyBadHp", { name: player.name, damage: result.hpDamage, before: result.hpBefore, after: result.hpAfter }));
+        if ((result.player.hp || 0) <= 0) {
+          eliminatePlayerFromGame(result.player, "prophecy drained their life");
+        }
+        return;
+      }
+
       const result = FortuneActions.applyFortuneRewardState({
         player,
         rewardRoll: Math.random(),
@@ -1626,6 +1694,7 @@ const state = {
         b: player.boots,
         s: player.shields,
         l: player.luckCharm,
+        ad: player.adrenaline,
         t: player.trapKit,
         r: player.rerollStone,
         a: player.alchemyCrystal,
@@ -1650,6 +1719,7 @@ const state = {
         boots: Number(raw.b) || 0,
         shields: Number(raw.s) || 0,
         luckCharm: Number(raw.l) || 0,
+        adrenaline: Number(raw.ad) || 0,
         trapKit: Number(raw.t) || 0,
         rerollStone: Number(raw.r) || 0,
         alchemyCrystal: Number(raw.a) || 0,
@@ -1707,16 +1777,22 @@ const state = {
       };
     }
 
-    function saveGameState(silent = false) {
+    function saveGameState(silent = false, force = false) {
       const perf = beginPerf("autosave.write");
+      if (!force && !autosaveDirty) {
+        endPerf(perf);
+        return;
+      }
       const snapshot = packSnapshot(buildSaveSnapshot());
       const snapshotJson = JSON.stringify(snapshot);
       if (snapshotJson === lastSavedSnapshotJson) {
+        autosaveDirty = false;
         endPerf(perf);
         return;
       }
       localStorage.setItem(SAVE_KEY, snapshotJson);
       lastSavedSnapshotJson = snapshotJson;
+      autosaveDirty = false;
       endPerf(perf);
       if (!silent) logEvent(t("ui.gameSaved"));
     }
@@ -1726,7 +1802,7 @@ const state = {
       clearTimeout(autosaveTimer);
       cancelIdle();
       autosaveTimer = setTimeout(() => {
-        requestIdle(() => saveGameState(true));
+        requestIdle(() => saveGameState(true, false));
       }, AUTOSAVE_DELAY_MS);
       endPerf(perf);
     }
@@ -1770,6 +1846,7 @@ const state = {
         boots: Math.max(0, Number(player.boots) || 0),
         shields: Math.max(0, Number(player.shields) || 0),
         luckCharm: Math.max(0, Number(player.luckCharm) || 0),
+        adrenaline: Math.max(0, Number(player.adrenaline) || 0),
         trapKit: Math.max(0, Number(player.trapKit) || 0),
         rerollStone: Math.max(0, Number(player.rerollStone) || 0),
         alchemyCrystal: Math.max(0, Number(player.alchemyCrystal) || 0),
@@ -1932,7 +2009,6 @@ const state = {
     function buildCells() {
       const layout = generateCellLayout();
       const traps = new Set(layout.trap || []);
-      const boosts = new Set(layout.boost || []);
       const shops = new Set(layout.shop || []);
       const blackMarkets = new Set(layout.blackMarket || []);
       const altars = new Set(layout.altar || []);
@@ -1943,7 +2019,6 @@ const state = {
         const types = [];
         if (number === LAST_CELL) types.push("finish");
         if (traps.has(number)) types.push("trap");
-        if (boosts.has(number)) types.push("boost");
         if (shops.has(number)) types.push("shop");
         if (blackMarkets.has(number)) types.push("blackMarket");
         if (altars.has(number)) types.push("altar");
@@ -1953,7 +2028,7 @@ const state = {
     }
 
     function normalizeCellTypes(rawTypes, number = 1) {
-      const allowed = new Set(["trap", "boost", "shop", "blackMarket", "altar", "fortuneTeller", "lottery", "finish"]);
+      const allowed = new Set(["trap", "shop", "blackMarket", "altar", "fortuneTeller", "lottery", "finish"]);
       const uniq = new Set();
       (Array.isArray(rawTypes) ? rawTypes : []).forEach((type) => {
         if (type === "lottery") type = "fortuneTeller";
@@ -1978,7 +2053,6 @@ const state = {
     function getPrimaryCellType(types) {
       if (types.includes("finish")) return "finish";
       if (types.includes("trap")) return "trap";
-      if (types.includes("boost")) return "boost";
       if (types.includes("shop")) return "shop";
       if (types.includes("blackMarket")) return "blackMarket";
       if (types.includes("altar")) return "altar";
@@ -2179,6 +2253,7 @@ const state = {
         player.boots,
         player.shields,
         player.luckCharm,
+        player.adrenaline,
         player.trapKit,
         player.rerollStone,
         player.alchemyCrystal,
@@ -2320,12 +2395,17 @@ const state = {
 
     function applyBlackMarketAction(player) {
       const fee = SERVICE_COSTS.blackMarket;
+      const baseProfitChanceMax = Number(CHANCES.blackMarket.profitMax);
+      const baseLossChanceMax = Number(CHANCES.blackMarket.lossMax);
+      const luckBonus = getLuckTalismanBonus(player);
+      const profitChanceMax = clamp(baseProfitChanceMax + luckBonus, 0, 0.95);
+      const lossChanceMax = clamp(Math.max(profitChanceMax, baseLossChanceMax - luckBonus), 0, 1);
       const result = FortuneActions.applyBlackMarketState({
         player,
         fee,
         roll: Math.random(),
-        profitChanceMax: CHANCES.blackMarket.profitMax,
-        lossChanceMax: CHANCES.blackMarket.lossMax,
+        profitChanceMax,
+        lossChanceMax,
         profitGold: REWARDS.blackMarketProfitGold,
         maxLossGold: REWARDS.blackMarketMaxLossGold
       });
@@ -2428,6 +2508,7 @@ const state = {
         player.boots,
         player.shields,
         player.luckCharm,
+        player.adrenaline,
         player.trapKit,
         player.rerollStone,
         player.alchemyCrystal,
@@ -2469,13 +2550,7 @@ const state = {
       }
 
       if (itemId === "luckCharm") {
-        if (player.luckCharm < 1) return;
-        pushHistory("Use item: Charm of favor");
-        player.luckCharm -= 1;
-        player.gold += REWARDS.luckCharmGold;
-        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} opens the Charm of favor and receives +${formatGold(REWARDS.luckCharmGold)}.`);
-        queueRenderFromDirty({ autosave: true });
+        // Luck talisman is passive.
         return;
       }
 
@@ -2689,6 +2764,14 @@ const state = {
     }
 
     function buildEffectsPanelHtml(player) {
+      const cacheKey = [
+        currentLanguage,
+        player.id,
+        player.bootsActive ? 1 : 0,
+        player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : ""
+      ].join("|");
+      const cached = effectsPanelCache.get(cacheKey);
+      if (cached) return cached;
       const effects = [];
       if (player.fortuneQuest) {
         const toneClass = player.fortuneQuest.omenType === "bad" ? "bad-event" : "good-event";
@@ -2712,12 +2795,18 @@ const state = {
         `);
       }
       const body = effects.length ? effects.join("") : `<div class="effect-desc">${t("ui.activeEffectsNone")}</div>`;
-      return `
+      const html = `
         <div class="effects-panel">
           <div class="effects-title">${t("ui.activeEffectsTitle")}</div>
           ${body}
         </div>
       `;
+      effectsPanelCache.set(cacheKey, html);
+      if (effectsPanelCache.size > MAX_EFFECTS_CACHE) {
+        const firstKey = effectsPanelCache.keys().next().value;
+        effectsPanelCache.delete(firstKey);
+      }
+      return html;
     }
 
     function renderStats() {
@@ -2739,6 +2828,7 @@ const state = {
         player.boots,
         player.shields,
         player.luckCharm,
+        player.adrenaline,
         player.trapKit,
         player.rerollStone,
         player.alchemyCrystal,
@@ -3124,18 +3214,31 @@ const state = {
       const start = player.position;
       if (start === targetCell) return;
       const direction = targetCell > start ? 1 : -1;
-      for (let pos = start + direction; direction > 0 ? pos <= targetCell : pos >= targetCell; pos += direction) {
+      const distance = Math.abs(targetCell - start);
+      // Keep movement smooth for short hops but reduce the number of renders for long moves.
+      const step = Math.max(1, Math.ceil(distance / 18));
+      const stepDelay = clamp(170 - Math.min(distance, 20) * 4, 50, 170);
+      for (let pos = start + direction; direction > 0 ? pos <= targetCell : pos >= targetCell; pos += direction * step) {
         const previousPos = player.position;
-        player.position = pos;
+        const nextPos = direction > 0 ? Math.min(pos, targetCell) : Math.max(pos, targetCell);
+        player.position = nextPos;
         queueRender({}, {
-          tokenPositions: [previousPos, pos],
+          tokenPositions: [previousPos, nextPos],
           tokenActiveIds: [player.id]
         });
-        await sleep(170);
+        await sleep(stepDelay);
       }
     }
 
     function eliminatePlayerFromGame(player, reasonText) {
+      if ((player?.hp || 0) <= 0 && (player?.adrenaline || 0) > 0) {
+        player.adrenaline -= 1;
+        player.hp = 1;
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        logEvent(t("ui.adrenalineTriggered", { name: player.name }));
+        return false;
+      }
+
       markPlayerDirty(player.id, {
         row: true,
         stats: true,
@@ -3184,33 +3287,26 @@ const state = {
             player.hp = clamp(player.hp - trapDamage, 0, player.maxHp);
             logEvent(formatTrapLogMessage(player.name, balance.key, trapDamage, hpBefore, player.hp));
             if (player.hp <= 0) {
-              eliminatePlayerFromGame(player, "health dropped to 0");
-              return { eliminated: true };
+              if (eliminatePlayerFromGame(player, "health dropped to 0")) {
+                return { eliminated: true };
+              }
             }
           }
         }
 
         if (moved) continue;
 
-        if (types.includes("boost")) {
-          const from = player.position;
-          const to = clamp(player.position + balance.boostForward, 1, LAST_CELL);
-          logEvent(`${player.name} touches the Power seal ${getCellTypeIcon("boost")} (${getPhaseLabel(balance.key, "en")}) and surges from ${from} -> ${to}.`);
-          await movePlayerAnimated(player, to);
-          continue;
-        }
-
         if (types.includes("shop")) {
-          logEvent(`${player.name} enters the Relic shop ${getCellTypeIcon("shop")}. Rewards are handed out manually by the Keeper.`);
+          logEvent(`${player.name} enters the ${getCellTypeLabel("shop")} ${getCellTypeIcon("shop")}.`);
         }
         if (types.includes("blackMarket")) {
           logEvent(t("ui.enterBlackMarket", { name: player.name, icon: getCellTypeIcon("blackMarket") }));
         }
         if (types.includes("altar")) {
-          logEvent(`${player.name} approaches the Blood altar ${getCellTypeIcon("altar")}. Right-click the tile to open the ritual menu.`);
+          logEvent(`${player.name} approaches the Blood altar ${getCellTypeIcon("altar")}.`);
         }
         if (types.includes("fortuneTeller")) {
-          logEvent(`${player.name} enters the Oracle circle ${getCellTypeIcon("fortuneTeller")}. Right-click the Oracle tile to open the ritual menu.`);
+          logEvent(`${player.name} enters the Oracle circle ${getCellTypeIcon("fortuneTeller")}.`);
         }
         if (types.includes("finish")) {
           handlePlayerFinished(player);
@@ -3341,9 +3437,10 @@ const state = {
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
     }
 
-    async function moveSelectedPlayerToChosenTile() {
+    async function moveSelectedPlayerToChosenTile(options = {}) {
       const player = selectedPlayer();
       if (!player || state.rolling || state.gameEnded || isPlayerFinished(player)) return;
+      const instant = Boolean(options.instant);
       pushHistory("Move to selected tile");
       state.rolling = true;
       renderStats();
@@ -3353,7 +3450,13 @@ const state = {
       const to = clamp(state.selectedCell, 1, LAST_CELL);
       const from = player.position;
       logEvent(`Keeper moves ${player.name} to tile ${to} (${from} -> ${to}).`);
-      await movePlayerAnimated(player, to);
+      if (instant) {
+        const previousPos = player.position;
+        player.position = to;
+        queueRender({}, { tokenPositions: [previousPos, to], tokenActiveIds: [player.id] });
+      } else {
+        await movePlayerAnimated(player, to);
+      }
       await resolveCellEffects(player);
 
       state.rolling = false;
@@ -3368,7 +3471,7 @@ const state = {
       const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
       const isShadowMarket = tileContextMode === "blackMarket";
       const marketCellType = isShadowMarket ? "blackMarket" : "shop";
-      const marketLabel = isShadowMarket ? "Shadow market" : "Relic shop";
+      const marketLabel = getCellTypeLabel(marketCellType);
       const marketIcon = getCellTypeIcon(marketCellType);
       if (!player) {
         logEvent(`Purchase unavailable: no selected player is on the ${marketLabel} tile.`);
@@ -3387,6 +3490,11 @@ const state = {
       }
       const playerProp = SHOP_ITEM_TO_PROP[action];
       if (!playerProp) return;
+      if (!isShadowMarket && (action === "adrenaline" || action === "trapKit")) {
+        logEvent(t("ui.shopItemBlackMarketOnly", { shop: getCellTypeLabel("shop"), cell: player.position, item: getShopItemName(item) }));
+        UIEffects.pulseClass(sourceEl, "shake", 400);
+        return;
+      }
 
       if (!canAddItemType(player, action)) {
         logEvent(`Inventory full: ${player.name} has all ${INVENTORY_SLOT_LIMIT} slots occupied (a free slot is needed for a new item type).`);
@@ -3465,11 +3573,13 @@ const state = {
       UIEffects.popGoldAtElement(goldEl, -item.price);
 
       const successChance = Math.min(1, Math.max(0, Number(CHANCES.blackMarket?.profitMax ?? 0.45)));
-      const failSlice = (1 - successChance) / 4;
+      const luckBonus = getLuckTalismanBonus(player);
+      const adjustedSuccessChance = Math.min(0.95, successChance + luckBonus);
+      const failSlice = (1 - adjustedSuccessChance) / 4;
       const roll = Math.random();
       let granted = false;
 
-      if (roll < successChance) {
+      if (roll < adjustedSuccessChance) {
         player[playerProp] = (player[playerProp] || 0) + 1;
         granted = true;
         if (action === "alchemyCrystal") {
@@ -3477,9 +3587,10 @@ const state = {
           animateContextGoldDelta(REWARDS.alchemyCrystalPurchaseBonusGold);
         }
         logEvent(t("ui.blackMarketBuySuccess", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
-      } else if (roll < successChance + failSlice) {
+      } else if (roll < adjustedSuccessChance + failSlice) {
         logEvent(t("ui.blackMarketBuyNoItem", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
-      } else if (roll < successChance + failSlice * 2) {
+        hideTileContextMenu();
+      } else if (roll < adjustedSuccessChance + failSlice * 2) {
         const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
         const beforeHp = player.hp;
         player.hp = clamp(player.hp - damage, 0, player.maxHp);
@@ -3487,23 +3598,31 @@ const state = {
         UIEffects.popTextAtElement(hpEl, `-${damage}${iconHp()}`);
         logEvent(t("ui.blackMarketBuyHurt", { name: player.name, price: formatGold(item.price), damage, before: beforeHp, after: player.hp }));
         if (player.hp <= 0) {
-          eliminatePlayerFromGame(player, "health dropped to 0");
-          state.rolling = false;
-          queueRender({
-            players: true,
-            stats: true,
-            selectedTile: true,
-            refreshInventoryOverlay: true,
-            refreshContextMenu: true,
-            tokensFull: true
-          }, { autosave: true });
-          return;
+          if (eliminatePlayerFromGame(player, "health dropped to 0")) {
+            state.rolling = false;
+            queueRender({
+              players: true,
+              stats: true,
+              selectedTile: true,
+              refreshInventoryOverlay: true,
+              refreshContextMenu: true,
+              tokensFull: true
+            }, { autosave: true });
+            return;
+          }
         }
-      } else if (roll < successChance + failSlice * 3) {
+      } else if (roll < adjustedSuccessChance + failSlice * 3) {
+        // Cheated: the deal goes through (item is granted), but the buyer loses extra gold.
+        player[playerProp] = (player[playerProp] || 0) + 1;
+        granted = true;
+        if (action === "alchemyCrystal") {
+          player.gold += REWARDS.alchemyCrystalPurchaseBonusGold;
+          animateContextGoldDelta(REWARDS.alchemyCrystalPurchaseBonusGold);
+        }
         const extraLoss = Math.min(player.gold, Math.max(5, Math.round(item.price * 0.12)));
         player.gold -= extraLoss;
         UIEffects.popGoldAtElement(goldEl, -extraLoss);
-        logEvent(t("ui.blackMarketBuyCheated", { name: player.name, price: formatGold(item.price), loss: formatGold(extraLoss) }));
+        logEvent(t("ui.blackMarketBuyCheated", { name: player.name, item: getShopItemName(item), price: formatGold(item.price), loss: formatGold(extraLoss) }));
       } else {
         const from = player.position;
         let direction = Math.random() < 0.5 ? -1 : 1;
@@ -3549,7 +3668,7 @@ const state = {
       if (!player) return;
       const isShadowMarket = tileContextMode === "blackMarket";
       const marketCellType = isShadowMarket ? "blackMarket" : "shop";
-      const marketLabel = isShadowMarket ? "Shadow market" : "Relic shop";
+      const marketLabel = getCellTypeLabel(marketCellType);
       const marketIcon = getCellTypeIcon(marketCellType);
       if (!hasCellType(player.position, marketCellType)) {
         logEvent(`Sale denied: ${player.name} must stand on the ${marketLabel} tile ${marketIcon}.`);
@@ -3560,6 +3679,7 @@ const state = {
         boots: { shopId: "boots", prop: SHOP_ITEM_TO_PROP.boots },
         shields: { shopId: "shield", prop: SHOP_ITEM_TO_PROP.shield },
         luckCharm: { shopId: "luckCharm", prop: SHOP_ITEM_TO_PROP.luckCharm },
+        adrenaline: { shopId: "adrenaline", prop: SHOP_ITEM_TO_PROP.adrenaline },
         trapKit: { shopId: "trapKit", prop: SHOP_ITEM_TO_PROP.trapKit },
         rerollStone: { shopId: "rerollStone", prop: SHOP_ITEM_TO_PROP.rerollStone },
         alchemyCrystal: { shopId: "alchemyCrystal", prop: SHOP_ITEM_TO_PROP.alchemyCrystal }
@@ -3615,18 +3735,20 @@ const state = {
       player[info.prop] -= 1;
 
       const successChance = Math.min(1, Math.max(0, Number(CHANCES.blackMarket?.profitMax ?? 0.45)));
-      const failSlice = (1 - successChance) / 4;
+      const luckBonus = getLuckTalismanBonus(player);
+      const adjustedSuccessChance = Math.min(0.95, successChance + luckBonus);
+      const failSlice = (1 - adjustedSuccessChance) / 4;
       const roll = Math.random();
       let goldDelta = 0;
 
-      if (roll < successChance) {
+      if (roll < adjustedSuccessChance) {
         player.gold += sellPrice;
         goldDelta = sellPrice;
         logEvent(t("ui.blackMarketSellSuccess", { name: player.name, item: getShopItemName(item), gold: formatGold(sellPrice) }));
-      } else if (roll < successChance + failSlice) {
+      } else if (roll < adjustedSuccessChance + failSlice) {
         logEvent(t("ui.blackMarketSellNoGold", { name: player.name, item: getShopItemName(item) }));
         hideTileContextMenu();
-      } else if (roll < successChance + failSlice * 2) {
+      } else if (roll < adjustedSuccessChance + failSlice * 2) {
         const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
         const beforeHp = player.hp;
         player.hp = clamp(player.hp - damage, 0, player.maxHp);
@@ -3634,19 +3756,20 @@ const state = {
         UIEffects.popTextAtElement(hpEl, `-${damage}${iconHp()}`);
         logEvent(t("ui.blackMarketSellHurt", { name: player.name, damage, before: beforeHp, after: player.hp }));
         if (player.hp <= 0) {
-          eliminatePlayerFromGame(player, "health dropped to 0");
-          state.rolling = false;
-          queueRender({
-            players: true,
-            stats: true,
-            selectedTile: true,
-            refreshInventoryOverlay: true,
-            refreshContextMenu: true,
-            tokensFull: true
-          }, { autosave: true });
-          return;
+          if (eliminatePlayerFromGame(player, "health dropped to 0")) {
+            state.rolling = false;
+            queueRender({
+              players: true,
+              stats: true,
+              selectedTile: true,
+              refreshInventoryOverlay: true,
+              refreshContextMenu: true,
+              tokensFull: true
+            }, { autosave: true });
+            return;
+          }
         }
-      } else if (roll < successChance + failSlice * 3) {
+      } else if (roll < adjustedSuccessChance + failSlice * 3) {
         const from = player.position;
         let direction = Math.random() < 0.5 ? -1 : 1;
         if (from <= 1) direction = 1;
@@ -3840,11 +3963,27 @@ const state = {
       });
 
       undoBtnEl.addEventListener("click", undoLastAction);
-      saveGameBtnEl.addEventListener("click", () => saveGameState(false));
+      saveGameBtnEl.addEventListener("click", () => saveGameState(false, true));
       loadGameBtnEl.addEventListener("click", loadGameState);
       newGameBtnEl.addEventListener("click", resetGameWithConfirm);
       victoryNewGameBtnEl?.addEventListener("click", resetGameWithConfirm);
-      moveToTileBtnEl.addEventListener("click", moveSelectedPlayerToChosenTile);
+      let moveToTileClickTimer = null;
+      moveToTileBtnEl.addEventListener("click", () => {
+        // Delay single-click so a double-click can override it.
+        if (moveToTileClickTimer) clearTimeout(moveToTileClickTimer);
+        moveToTileClickTimer = setTimeout(() => {
+          moveToTileClickTimer = null;
+          void moveSelectedPlayerToChosenTile({ instant: false });
+        }, 220);
+      });
+      moveToTileBtnEl.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        if (moveToTileClickTimer) {
+          clearTimeout(moveToTileClickTimer);
+          moveToTileClickTimer = null;
+        }
+        void moveSelectedPlayerToChosenTile({ instant: true });
+      });
       closeInventoryBtnEl.addEventListener("click", closeInventoryOverlay);
       closeVictoryBtnEl.addEventListener("click", closeVictoryOverlay);
       inventoryOverlayEl.addEventListener("click", (event) => {
