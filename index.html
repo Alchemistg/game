@@ -10,6 +10,140 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <section id="mainMenu" class="main-menu is-hidden" aria-label="Главное меню">
+    <div class="main-menu-inner">
+      <div class="main-menu-brand">
+        <img class="main-menu-logo" src="./icon.svg" alt="" aria-hidden="true" />
+        <div class="main-menu-title">Катакомбы Культа</div>
+        <div class="main-menu-subtitle">Панель ведущего для настольного ритуала</div>
+      </div>
+      <div class="main-menu-actions">
+        <div class="main-menu-actions-row">
+          <button id="mainMenuContinueBtn" class="primary" type="button">Продолжить</button>
+        </div>
+        <div class="main-menu-actions-row">
+          <button id="newGameBtn" type="button" data-i18n="ui.newGameBtn">Новая игра</button>
+          <button id="tutorialBtn" type="button">Обучение</button>
+        </div>
+        <div class="main-menu-actions-row">
+          <button id="saveGameBtn" type="button" data-i18n="ui.saveBtn">Сохранить печать</button>
+          <button id="loadGameBtn" type="button" data-i18n="ui.loadBtn">Восстановить печать</button>
+        </div>
+        <button id="mainMenuSettingsBtn" type="button">Настройки</button>
+        <button id="installAppBtn" class="install-app-btn" type="button" hidden data-i18n="ui.installAppBtn">Установить приложение</button>
+      </div>
+      <div class="main-menu-footer">
+        <span>Esc — закрыть меню</span>
+      </div>
+  <section id="newGameSetup" class="session-picker is-hidden" aria-label="Создание новой игры">
+    <div class="session-picker-inner settings-config-section" role="dialog" aria-modal="true">
+      <div class="session-picker-head">
+        <div class="session-picker-title">Создание новой игры</div>
+        <button id="newGameCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+          <div class="config-menu-hint">Настройки конфига применятся при старте новой игры.</div>
+          <div class="session-picker-actions">
+            <button id="newGameStartBtn" class="primary" type="button">Старт новой игры</button>
+          </div>
+          <label class="config-field">
+            <span>Название игры/сохранения</span>
+            <input id="newGameNameInput" type="text" maxlength="40" placeholder="Например: Вечерняя партия" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configBoardSize">Размер поля</span>
+            <input id="configBoardSize" type="number" min="5" max="20" step="1" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configPlayerMaxHp">Максимум HP</span>
+            <input id="configPlayerMaxHp" type="number" min="10" max="999" step="1" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configGoldPerMove">Золото за ход</span>
+            <input id="configGoldPerMove" type="number" min="1" max="100" step="1" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configInventorySlots">Слоты инвентаря</span>
+            <input id="configInventorySlots" type="number" min="1" max="10" step="1" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configAutosaveDelay">Автосохранение, мс</span>
+            <input id="configAutosaveDelay" type="number" min="100" max="5000" step="50" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configFinishersToEndGame">Финишеров для конца игры</span>
+            <input id="configFinishersToEndGame" type="number" min="1" max="10" step="1" />
+          </label>
+          <div class="config-balance-title" data-i18n="ui.configBalanceTitle">Баланс</div>
+          <label class="config-range-field">
+            <div class="config-range-label">
+              <span data-i18n="ui.configFortuneGoodChance">Хороший знак</span>
+              <span id="fortuneGoodChanceValue" class="config-range-value"></span>
+            </div>
+            <input id="configFortuneGoodChance" type="range" min="0" max="100" step="1" />
+          </label>
+          <label class="config-range-field">
+            <div class="config-range-label">
+              <span data-i18n="ui.configBlackMarketProfitChance">Прибыльный рынок</span>
+              <span id="blackMarketProfitChanceValue" class="config-range-value"></span>
+            </div>
+            <input id="configBlackMarketProfitChance" type="range" min="0" max="100" step="1" />
+          </label>
+          <label class="config-range-field">
+            <div class="config-range-label">
+              <span data-i18n="ui.configAltarShieldChance">Печать с алтаря</span>
+              <span id="altarShieldChanceValue" class="config-range-value"></span>
+            </div>
+            <input id="configAltarShieldChance" type="range" min="0" max="100" step="1" />
+          </label>
+          <div id="configEditorStatus" class="config-editor-status" aria-live="polite"></div>
+          <div class="session-picker-actions">
+            <button id="resetConfigBtn" type="button" data-i18n="ui.configResetBtn">Сбросить к дефолту</button>
+          </div>
+        </div>
+      </section>
+  <section id="settingsPanel" class="session-picker is-hidden" aria-label="Настройки">
+    <div class="session-picker-inner" role="dialog" aria-modal="true">
+      <div class="session-picker-head">
+        <div class="session-picker-title" data-i18n="ui.settingsTitle">Настройки</div>
+        <button id="settingsCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+          <div class="settings-section" data-settings-tab-panel="general">
+            <label for="languageSelect" data-i18n="app.languageLabel">Язык</label>
+            <select id="languageSelect" aria-label="Язык">
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+              <option value="uk">Українська</option>
+            </select>
+          </div>
+      <div class="session-picker-actions">
+        <button id="sidePanelToggleBtn" type="button">← Панель влево</button>
+      </div>
+          <div class="settings-actions">
+            <label class="reset-all-toggle" title="Сохранение игроков между новыми играми">
+              <input id="savePlayersToggle" type="checkbox" />
+              <span>Сохранять игроков</span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section id="sessionPicker" class="session-picker is-hidden" aria-label="Загрузка сессии">
+    <div class="session-picker-inner" role="dialog" aria-modal="true">
+      <div class="session-picker-head">
+        <div class="session-picker-title">Выберите сессию</div>
+        <button id="sessionPickerCloseIconBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <select id="sessionPickerSelect" aria-label="Сессия для загрузки"></select>
+      <div class="session-picker-actions">
+        <button id="sessionPickerLoadBtn" class="primary" type="button">Загрузить</button>
+      </div>
+      <div class="session-picker-actions">
+        <button id="sessionPickerRenameBtn" type="button">Переименовать</button>
+        <button id="sessionPickerDeleteBtn" type="button">Удалить</button>
+      </div>
+    </div>
+  </section>
   <div class="layout">
     <section class="board-panel">
       <h1 id="gameTitle">Катакомбы Культа</h1>
@@ -91,96 +225,6 @@
 
     </aside>
   </div>
-  <button id="settingsLauncher" class="settings-launcher" type="button" aria-controls="settingsPanel" data-i18n="ui.settingsLauncher">⚙</button>
-  <aside id="settingsPanel" class="settings-panel is-hidden" aria-label="Настройки">
-    <div class="settings-header">
-      <div class="settings-header-main">
-        <h2 data-i18n="ui.settingsTitle">Настройки</h2>
-        <div class="settings-tabs" role="tablist" aria-label="Разделы настроек">
-          <button id="settingsGeneralTabBtn" class="settings-tab is-active" type="button" role="tab" aria-selected="true" data-settings-tab="general" data-i18n="ui.settingsTabGeneral">Базовые</button>
-          <span class="settings-tabs-spacer" aria-hidden="true"></span>
-          <button id="settingsConfigTabBtn" class="settings-tab" type="button" role="tab" aria-selected="false" data-settings-tab="config" data-i18n="ui.settingsTabConfig">Конфиг</button>
-        </div>
-      </div>
-      <button id="settingsCloseBtn" class="settings-close modal-close-btn" type="button" data-i18n="ui.settingsClose" aria-label="Закрыть">×</button>
-    </div>
-    <div class="settings-section" data-settings-tab-panel="general">
-      <label for="languageSelect" data-i18n="app.languageLabel">Язык</label>
-      <select id="languageSelect" aria-label="Язык">
-        <option value="ru">Русский</option>
-        <option value="en">English</option>
-        <option value="uk">Українська</option>
-      </select>
-    </div>
-    <div class="settings-section settings-config-section" data-settings-tab-panel="config">
-      <div class="config-menu-title" data-i18n="ui.configMenuTitle">Настройки конфига</div>
-      <div class="config-menu-hint" data-i18n="ui.configMenuHint">Изменения применятся после перезагрузки.</div>
-      <label class="config-field">
-        <span data-i18n="ui.configBoardSize">Размер поля</span>
-        <input id="configBoardSize" type="number" min="5" max="20" step="1" />
-      </label>
-      <label class="config-field">
-        <span data-i18n="ui.configPlayerMaxHp">Максимум HP</span>
-        <input id="configPlayerMaxHp" type="number" min="10" max="999" step="1" />
-      </label>
-      <label class="config-field">
-        <span data-i18n="ui.configGoldPerMove">Золото за ход</span>
-        <input id="configGoldPerMove" type="number" min="1" max="100" step="1" />
-      </label>
-      <label class="config-field">
-        <span data-i18n="ui.configInventorySlots">Слоты инвентаря</span>
-        <input id="configInventorySlots" type="number" min="1" max="10" step="1" />
-      </label>
-      <label class="config-field">
-        <span data-i18n="ui.configAutosaveDelay">Автосохранение, мс</span>
-        <input id="configAutosaveDelay" type="number" min="100" max="5000" step="50" />
-      </label>
-      <label class="config-field">
-        <span data-i18n="ui.configFinishersToEndGame">Финишеров для конца игры</span>
-        <input id="configFinishersToEndGame" type="number" min="1" max="10" step="1" />
-      </label>
-      <div class="config-balance-title" data-i18n="ui.configBalanceTitle">Баланс</div>
-      <label class="config-range-field">
-        <div class="config-range-label">
-          <span data-i18n="ui.configFortuneGoodChance">Хороший знак</span>
-          <span id="fortuneGoodChanceValue" class="config-range-value"></span>
-        </div>
-        <input id="configFortuneGoodChance" type="range" min="0" max="100" step="1" />
-      </label>
-      <label class="config-range-field">
-        <div class="config-range-label">
-          <span data-i18n="ui.configBlackMarketProfitChance">Прибыльный рынок</span>
-          <span id="blackMarketProfitChanceValue" class="config-range-value"></span>
-        </div>
-        <input id="configBlackMarketProfitChance" type="range" min="0" max="100" step="1" />
-      </label>
-      <label class="config-range-field">
-        <div class="config-range-label">
-          <span data-i18n="ui.configAltarShieldChance">Печать с алтаря</span>
-          <span id="altarShieldChanceValue" class="config-range-value"></span>
-        </div>
-        <input id="configAltarShieldChance" type="range" min="0" max="100" step="1" />
-      </label>
-      <div class="config-menu-summary" data-i18n="ui.configLastCellHint">Последняя клетка обновится автоматически.</div>
-      <div id="configLastCellPreview" class="config-menu-preview" aria-live="polite"></div>
-      <div id="configEditorStatus" class="config-editor-status" aria-live="polite"></div>
-      <div class="config-editor-actions">
-        <button id="saveConfigBtn" type="button" data-i18n="ui.configSaveBtn">Применить настройки</button>
-        <button id="resetConfigBtn" type="button" data-i18n="ui.configResetBtn">Сбросить к дефолту</button>
-      </div>
-    </div>
-    <div class="settings-actions">
-      <button id="saveGameBtn" data-i18n="ui.saveBtn">Сохранить печать</button>
-      <button id="loadGameBtn" data-i18n="ui.loadBtn">Восстановить печать</button>
-      <button id="newGameBtn" data-i18n="ui.newGameBtn">Новая игра</button>
-      <label class="reset-all-toggle" title="Полный сброс">
-        <input id="fullResetToggle" type="checkbox" />
-        <span data-i18n="ui.fullResetToggle">Сбросить всё</span>
-      </label>
-      <button id="installAppBtn" class="install-app-btn" type="button" hidden data-i18n="ui.installAppBtn">Установить приложение</button>
-      <button id="sidePanelToggleBtn" type="button">← Панель влево</button>
-    </div>
-  </aside>
   <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
   <button id="eventJournalLauncher" class="event-journal-launcher" type="button" aria-controls="eventJournal" aria-expanded="false" aria-label="Логи" title="Логи">≡</button>
   <section id="eventJournal" class="event-journal is-hidden" aria-label="Логи">
@@ -263,7 +307,7 @@
       </div>
       <div id="victoryBody" class="inventory-body"></div>
       <div class="victory-actions">
-        <button id="victoryNewGameBtn" class="primary" type="button" data-i18n="ui.newGameBtn">Новая игра</button>
+        <button id="victoryNewGameBtn" class="primary" type="button">Главное меню</button>
       </div>
     </div>
   </div>
@@ -273,6 +317,7 @@
     <script src="actions/player.js"></script>
     <script src="actions/shop.js"></script>
     <script src="actions/fortune.js"></script>
+    <script src="tutorial.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -1,5 +1,11 @@
 let CONFIG = window.GAME_CONFIG;
 const CONFIG_OVERRIDES_STORAGE_KEY = "alchemist_dungeon_config_overrides_v1";
+const PENDING_NEW_GAME_KEY = "alchemist_dungeon_pending_new_game_v1";
+const SAVE_PLAYERS_OPTION_KEY = "alchemist_dungeon_save_players_v1";
+const PENDING_NEW_GAME_PLAYERS_KEY = "alchemist_dungeon_pending_new_game_players_v1";
+const PENDING_NEW_GAME_NAME_KEY = "alchemist_dungeon_pending_new_game_name_v1";
+const TUTORIAL_PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v1";
+const TUTORIAL_SEEN_KEY = "alchemist_dungeon_tutorial_seen_v1";
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -99,6 +105,9 @@ const state = {
     const boardStaticLayerEl = document.getElementById("boardStaticLayer");
     const tokensLayerEl = document.getElementById("tokensLayer");
     const gameTitleEl = document.getElementById("gameTitle");
+    const mainMenuEl = document.getElementById("mainMenu");
+    const mainMenuContinueBtnEl = document.getElementById("mainMenuContinueBtn");
+    const mainMenuSettingsBtnEl = document.getElementById("mainMenuSettingsBtn");
     const settingsLauncherEl = document.getElementById("settingsLauncher");
     const settingsPanelEl = document.getElementById("settingsPanel");
     const settingsCloseBtnEl = document.getElementById("settingsCloseBtn");
@@ -139,8 +148,23 @@ const state = {
     const saveGameBtnEl = document.getElementById("saveGameBtn");
     const loadGameBtnEl = document.getElementById("loadGameBtn");
     const newGameBtnEl = document.getElementById("newGameBtn");
-    const fullResetToggleEl = document.getElementById("fullResetToggle");
+    const newGameSetupEl = document.getElementById("newGameSetup");
+    const newGameStartBtnEl = document.getElementById("newGameStartBtn");
+    const newGameCloseBtnEl = document.getElementById("newGameCloseBtn");
+    const newGameNameInputEl = document.getElementById("newGameNameInput");
+    const savePlayersToggleEl = document.getElementById("savePlayersToggle");
     const installAppBtnEl = document.getElementById("installAppBtn");
+    const tutorialBtnEl = document.getElementById("tutorialBtn");
+    const sessionSelectEl = document.getElementById("sessionSelect");
+    const sessionNewBtnEl = document.getElementById("sessionNewBtn");
+    const sessionSaveBtnEl = document.getElementById("sessionSaveBtn");
+    const sessionPickerEl = document.getElementById("sessionPicker");
+    const sessionPickerSelectEl = document.getElementById("sessionPickerSelect");
+    const sessionPickerCloseBtnEl = document.getElementById("sessionPickerCloseBtn");
+    const sessionPickerCloseIconBtnEl = document.getElementById("sessionPickerCloseIconBtn");
+    const sessionPickerLoadBtnEl = document.getElementById("sessionPickerLoadBtn");
+    const sessionPickerRenameBtnEl = document.getElementById("sessionPickerRenameBtn");
+    const sessionPickerDeleteBtnEl = document.getElementById("sessionPickerDeleteBtn");
     const activePlayerCardEl = document.getElementById("activePlayerCard");
     const playerStatsEl = document.getElementById("playerStats");
     const rollBtnEl = document.getElementById("rollBtn");
@@ -211,6 +235,13 @@ const state = {
     let lastLogRenderedSignature = "";
     let lastInventorySignature = "";
     let deferredInstallPrompt = null;
+    let tutorialManager = null;
+    let suppressTutorialAutostartOnce = false;
+    let mainMenuScrollY = 0;
+    const SESSIONS_INDEX_KEY = "alchemist_dungeon_sessions_v1";
+    const ACTIVE_SESSION_KEY = "alchemist_dungeon_active_session_v1";
+    const SAVE_SLOT_PREFIX = `${SAVE_KEY}__slot__`;
+    let activeSessionId = "";
     const SETTINGS_TAB_KEY = "alchemist_dungeon_settings_tab_v1";
     let settingsTab = window.localStorage.getItem(SETTINGS_TAB_KEY) === "config" ? "config" : "general";
     const LOG_DOM_LIMIT = 200;
@@ -405,7 +436,7 @@ const state = {
     }
 
     function setSettingsTab(nextTab) {
-      settingsTab = nextTab === "config" ? "config" : "general";
+      settingsTab = "general";
       syncSettingsTab();
     }
 
@@ -430,7 +461,7 @@ const state = {
       setConfigEditorStatus("");
     }
 
-    function saveConfigOverridesFromMenu() {
+    function buildConfigOverridesFromInputs() {
       const boardSize = clampConfigNumber(getConfigInputValue(configBoardSizeEl, CONFIG.BOARD_SIZE || 10), 5, 20, CONFIG.BOARD_SIZE || 10);
       const playerMaxHp = clampConfigNumber(getConfigInputValue(configPlayerMaxHpEl, CONFIG.PLAYER_MAX_HP || 100), 10, 999, CONFIG.PLAYER_MAX_HP || 100);
       const goldPerMove = clampConfigNumber(getConfigInputValue(configGoldPerMoveEl, CONFIG.GOLD_PER_MOVE || 10), 1, 100, CONFIG.GOLD_PER_MOVE || 10);
@@ -454,9 +485,34 @@ const state = {
           altar: { shieldMax: altarShieldChance }
         }
       };
+      return overrides;
+    }
+
+    function shouldSavePlayersBetweenNewGames() {
+      try {
+        return window.localStorage.getItem(SAVE_PLAYERS_OPTION_KEY) === "1";
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function syncSavePlayersToggle() {
+      if (!savePlayersToggleEl) return;
+      savePlayersToggleEl.checked = shouldSavePlayersBetweenNewGames();
+    }
+
+    function persistConfigOverrides(overrides) {
       try {
         window.localStorage.setItem(CONFIG_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+        return true;
       } catch (_) {
+        return false;
+      }
+    }
+
+    function saveConfigOverridesFromMenu() {
+      const overrides = buildConfigOverridesFromInputs();
+      if (!persistConfigOverrides(overrides)) {
         setConfigEditorStatus(t("ui.configSaveFailed"), "error");
         showLogToast(t("ui.configSaveFailed"));
         return;
@@ -464,6 +520,41 @@ const state = {
       setConfigEditorStatus(t("ui.configSaved"), "success");
       showLogToast(t("ui.configSaved"));
       window.setTimeout(() => window.location.reload(), 500);
+    }
+
+    function setNewGameSetupOpen(isOpen) {
+      if (!newGameSetupEl) return;
+      newGameSetupEl.classList.toggle("is-hidden", !isOpen);
+      if (isOpen) emitGameEvent("new-game-menu-opened");
+      if (isOpen) setSettingsPanelOpen(false);
+    }
+
+    function startNewGameWithConfig() {
+      const overrides = buildConfigOverridesFromInputs();
+      if (!persistConfigOverrides(overrides)) {
+        setConfigEditorStatus(t("ui.configSaveFailed"), "error");
+        showLogToast(t("ui.configSaveFailed"));
+        return;
+      }
+      try {
+        window.localStorage.setItem(PENDING_NEW_GAME_KEY, "1");
+        if (document.body.classList.contains("tutorial-active")) {
+          // Tutorial step "start new game" triggers page reload. Move to the next step explicitly.
+          window.localStorage.setItem(TUTORIAL_PROGRESS_KEY, "4");
+          window.localStorage.removeItem(TUTORIAL_SEEN_KEY);
+        }
+        if (shouldSavePlayersBetweenNewGames() && Array.isArray(state.players) && state.players.length > 0) {
+          window.localStorage.setItem(PENDING_NEW_GAME_PLAYERS_KEY, JSON.stringify(clonePlayers(state.players)));
+        } else {
+          window.localStorage.removeItem(PENDING_NEW_GAME_PLAYERS_KEY);
+        }
+        const pendingName = String(newGameNameInputEl?.value || "").trim().slice(0, 40);
+        if (pendingName) window.localStorage.setItem(PENDING_NEW_GAME_NAME_KEY, pendingName);
+        else window.localStorage.removeItem(PENDING_NEW_GAME_NAME_KEY);
+      } catch (_) {
+        // ignore
+      }
+      window.location.reload();
     }
 
     function resetConfigOverrides() {
@@ -832,6 +923,7 @@ const state = {
       syncLogLauncherState();
       renderLogWindow();
       logBoxEl.scrollTop = logBoxEl.scrollHeight;
+      emitGameEvent("logs-opened");
     }
 
     function closeLogPanel() {
@@ -876,12 +968,391 @@ const state = {
     function setSettingsPanelOpen(isOpen) {
       if (!settingsPanelEl) return;
       settingsPanelEl.classList.toggle("is-hidden", !isOpen);
-      settingsPanelEl.classList.toggle("is-open", isOpen);
       if (settingsLauncherEl) {
         settingsLauncherEl.classList.toggle("is-hidden", isOpen);
         settingsLauncherEl.setAttribute("aria-expanded", isOpen ? "true" : "false");
       }
+      if (isOpen) setNewGameSetupOpen(false);
       if (isOpen) syncSettingsTab();
+    }
+
+    function safeJsonParse(raw, fallback = null) {
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function nowIso() {
+      try {
+        return new Date().toISOString();
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function getSaveSlotKey(sessionId) {
+      return `${SAVE_SLOT_PREFIX}${sessionId}`;
+    }
+
+    function readSessionsIndex() {
+      try {
+        const raw = localStorage.getItem(SESSIONS_INDEX_KEY);
+        if (!raw) return [];
+        const parsed = safeJsonParse(raw, []);
+        return Array.isArray(parsed) ? parsed.filter((s) => s && typeof s === "object" && typeof s.id === "string") : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeSessionsIndex(sessions) {
+      try {
+        localStorage.setItem(SESSIONS_INDEX_KEY, JSON.stringify(Array.isArray(sessions) ? sessions : []));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function readActiveSessionId() {
+      try {
+        return String(localStorage.getItem(ACTIVE_SESSION_KEY) || "");
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function writeActiveSessionId(sessionId) {
+      try {
+        localStorage.setItem(ACTIVE_SESSION_KEY, String(sessionId || ""));
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    function generateSessionId() {
+      return `s_${Date.now()}_${Math.random().toString(16).slice(2, 7)}`;
+    }
+
+    function buildDefaultSessionName(existingCount) {
+      const next = Math.max(1, Number(existingCount) || 0) + 1;
+      return `Сессия ${next}`;
+    }
+
+    function ensureSessionsInitialized() {
+      const existing = readSessionsIndex();
+      const active = readActiveSessionId();
+      if (existing.length > 0) {
+        activeSessionId = existing.some((s) => s.id === active) ? active : existing[0].id;
+        writeActiveSessionId(activeSessionId);
+        return;
+      }
+
+      let legacyRaw = "";
+      try {
+        legacyRaw = String(localStorage.getItem(SAVE_KEY) || "");
+      } catch (_) {
+        legacyRaw = "";
+      }
+
+      const firstId = generateSessionId();
+      const sessions = [{
+        id: firstId,
+        name: "Сессия 1",
+        createdAt: nowIso(),
+        updatedAt: nowIso()
+      }];
+
+      if (legacyRaw && legacyRaw.trim()) {
+        try {
+          localStorage.setItem(getSaveSlotKey(firstId), legacyRaw);
+          localStorage.removeItem(SAVE_KEY);
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      writeSessionsIndex(sessions);
+      activeSessionId = firstId;
+      writeActiveSessionId(activeSessionId);
+    }
+
+    function getSessionLabel(session) {
+      const name = String(session?.name || "").trim() || "Сессия";
+      const updated = String(session?.updatedAt || "").trim();
+      if (!updated) return name;
+      const short = updated.replace("T", " ").replace(/\.\d+Z$/, "Z").replace("Z", "");
+      return `${name} • ${short}`;
+    }
+
+    function syncSessionSelect() {
+      if (!sessionSelectEl) return;
+      const sessions = readSessionsIndex();
+      const prev = String(sessionSelectEl.value || "");
+      sessionSelectEl.innerHTML = "";
+      sessions.forEach((session) => {
+        const option = document.createElement("option");
+        option.value = session.id;
+        option.textContent = getSessionLabel(session);
+        sessionSelectEl.appendChild(option);
+      });
+      const target = sessions.some((s) => s.id === activeSessionId) ? activeSessionId : (sessions[0]?.id || "");
+      sessionSelectEl.value = sessions.some((s) => s.id === prev) ? prev : target;
+    }
+
+    function syncSessionPickerSelect() {
+      if (!sessionPickerSelectEl) return;
+      const sessions = readSessionsIndex();
+      const prev = String(sessionPickerSelectEl.value || "");
+      sessionPickerSelectEl.innerHTML = "";
+      sessions.forEach((session) => {
+        const option = document.createElement("option");
+        option.value = session.id;
+        option.textContent = getSessionLabel(session);
+        sessionPickerSelectEl.appendChild(option);
+      });
+      const target = sessions.some((s) => s.id === activeSessionId) ? activeSessionId : (sessions[0]?.id || "");
+      sessionPickerSelectEl.value = sessions.some((s) => s.id === prev) ? prev : target;
+    }
+
+    function setSessionPickerOpen(isOpen) {
+      if (!sessionPickerEl) return;
+      sessionPickerEl.classList.toggle("is-hidden", !isOpen);
+      if (isOpen) {
+        syncSessionPickerSelect();
+        sessionPickerSelectEl?.focus();
+      }
+    }
+
+    function openSessionPicker() {
+      setSessionPickerOpen(true);
+    }
+
+    function setActiveSession(sessionId) {
+      const id = String(sessionId || "");
+      const sessions = readSessionsIndex();
+      if (!sessions.some((s) => s.id === id)) return false;
+      activeSessionId = id;
+      writeActiveSessionId(activeSessionId);
+      syncSessionSelect();
+      syncSessionPickerSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function createNewSession() {
+      const sessions = readSessionsIndex();
+      const id = generateSessionId();
+      const session = { id, name: buildDefaultSessionName(sessions.length), createdAt: nowIso(), updatedAt: nowIso() };
+      const next = sessions.concat(session);
+      if (!writeSessionsIndex(next)) return null;
+      setActiveSession(id);
+      return session;
+    }
+
+    function setSessionNameById(sessionId, sessionName) {
+      const id = String(sessionId || "");
+      const clean = String(sessionName || "").trim().slice(0, 40);
+      if (!id || !clean) return false;
+      const sessions = readSessionsIndex();
+      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      if (!writeSessionsIndex(updated)) return false;
+      syncSessionSelect();
+      syncSessionPickerSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function renameActiveSession() {
+      if (!activeSessionId) return false;
+      const sessions = readSessionsIndex();
+      const session = sessions.find((s) => s.id === activeSessionId);
+      if (!session) return false;
+      const nextName = window.prompt("Название сессии:", String(session.name || "").trim() || "Сессия");
+      if (!nextName) return false;
+      const clean = String(nextName).trim().slice(0, 40);
+      if (!clean) return false;
+      const updated = sessions.map((s) => s.id === activeSessionId ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      writeSessionsIndex(updated);
+      syncSessionSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function renameSessionById(sessionId) {
+      const id = String(sessionId || "");
+      if (!id) return false;
+      const sessions = readSessionsIndex();
+      const session = sessions.find((s) => s.id === id);
+      if (!session) return false;
+      const nextName = window.prompt("Название сессии:", String(session.name || "").trim() || "Сессия");
+      if (!nextName) return false;
+      const clean = String(nextName).trim().slice(0, 40);
+      if (!clean) return false;
+      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      writeSessionsIndex(updated);
+      syncSessionSelect();
+      syncSessionPickerSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function deleteActiveSession() {
+      const sessions = readSessionsIndex();
+      if (!activeSessionId || sessions.length === 0) return false;
+      const session = sessions.find((s) => s.id === activeSessionId);
+      if (!session) return false;
+      const ok = window.confirm(`Удалить сессию "${String(session.name || "Сессия")}"? Сохранение этой сессии будет потеряно.`);
+      if (!ok) return false;
+      const remaining = sessions.filter((s) => s.id !== activeSessionId);
+      try {
+        localStorage.removeItem(getSaveSlotKey(activeSessionId));
+      } catch (_) {
+        // ignore
+      }
+      if (remaining.length === 0) {
+        writeSessionsIndex([]);
+        writeActiveSessionId("");
+        activeSessionId = "";
+        ensureSessionsInitialized();
+      } else {
+        writeSessionsIndex(remaining);
+        activeSessionId = remaining[0].id;
+        writeActiveSessionId(activeSessionId);
+      }
+      syncSessionSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function deleteSessionById(sessionId) {
+      const id = String(sessionId || "");
+      const sessions = readSessionsIndex();
+      const session = sessions.find((s) => s.id === id);
+      if (!session) return false;
+      const ok = window.confirm(`Удалить сессию "${String(session.name || "Сессия")}"? Сохранение этой сессии будет потеряно.`);
+      if (!ok) return false;
+      const remaining = sessions.filter((s) => s.id !== id);
+      try {
+        localStorage.removeItem(getSaveSlotKey(id));
+      } catch (_) {
+        // ignore
+      }
+
+      // If the active session was deleted, fall back to the first remaining (or create a new one).
+      if (activeSessionId === id) {
+        if (remaining.length === 0) {
+          writeSessionsIndex([]);
+          writeActiveSessionId("");
+          activeSessionId = "";
+          ensureSessionsInitialized();
+        } else {
+          activeSessionId = remaining[0].id;
+          writeActiveSessionId(activeSessionId);
+        }
+      }
+
+      writeSessionsIndex(remaining);
+      syncSessionSelect();
+      syncSessionPickerSelect();
+      syncMainMenu();
+      return true;
+    }
+
+    function hasSessionSave(sessionId) {
+      const targetSessionId = String(sessionId || "");
+      if (!targetSessionId) return false;
+      try {
+        const raw = localStorage.getItem(getSaveSlotKey(targetSessionId));
+        return Boolean(raw && raw.trim());
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function getContinueSessionId() {
+      if (hasSessionSave(activeSessionId)) return activeSessionId;
+      const sessions = readSessionsIndex();
+      for (let i = sessions.length - 1; i >= 0; i -= 1) {
+        if (hasSessionSave(sessions[i]?.id)) return String(sessions[i].id);
+      }
+      return "";
+    }
+
+    function hasSavedGame() {
+      return Boolean(getContinueSessionId());
+    }
+
+    function lockScrollForMainMenu() {
+      mainMenuScrollY = window.scrollY || 0;
+      document.body.classList.add("main-menu-open");
+      // Hard lock: prevents wheel/touch scroll from moving the page under the overlay.
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${mainMenuScrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+    }
+
+    function unlockScrollForMainMenu() {
+      document.body.classList.remove("main-menu-open");
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      window.scrollTo(0, mainMenuScrollY || 0);
+    }
+
+    function setMainMenuOpen(isOpen) {
+      if (!mainMenuEl) return;
+      mainMenuEl.classList.toggle("is-hidden", !isOpen);
+      if (settingsLauncherEl) {
+        settingsLauncherEl.classList.toggle("is-hidden", isOpen);
+      }
+      if (isOpen) setSettingsPanelOpen(false);
+      if (isOpen) lockScrollForMainMenu();
+      else unlockScrollForMainMenu();
+      syncMainMenu();
+    }
+
+    function syncMainMenu() {
+      if (!mainMenuEl) return;
+      const canContinue = hasSavedGame();
+      if (mainMenuContinueBtnEl) {
+        mainMenuContinueBtnEl.disabled = !canContinue;
+        mainMenuContinueBtnEl.textContent = canContinue ? "Продолжить" : "Продолжить (нет сохранения)";
+      }
+    }
+
+    function emitGameEvent(name, detail = {}) {
+      document.dispatchEvent(new CustomEvent(`game:${name}`, { detail }));
+    }
+
+    function isTutorialActive() {
+      return Boolean(tutorialManager && tutorialManager.isActive());
+    }
+
+    function getFirstCellWithType(type) {
+      const cell = state.cells.find((entry) => getCellTypes(entry.number).includes(type));
+      return cell ? cell.number : 0;
+    }
+
+    function prepareTutorialPlayerForShop(player) {
+      if (!player || !isTutorialActive()) return;
+      if (player.gold < 160) {
+        player.gold = 160;
+      }
+    }
+
+    function getTutorialForcedRoll(player) {
+      if (!player || !isTutorialActive() || player.position !== 1) return 0;
+      const shopCell = (CELL_LAYOUT.shop || []).find((cellNumber) => cellNumber > 1 && cellNumber <= 7);
+      const target = shopCell || getFirstCellWithType("shop");
+      const distance = target - player.position;
+      return distance >= 1 && distance <= 6 ? distance : 0;
     }
 
     function markPlayerDirty(playerId, patch = {}) {
@@ -1777,9 +2248,15 @@ const state = {
       };
     }
 
-    function saveGameState(silent = false, force = false) {
+    function saveGameState(silent = false, force = false, sessionId = "") {
       const perf = beginPerf("autosave.write");
       if (!force && !autosaveDirty) {
+        endPerf(perf);
+        return;
+      }
+      if (!activeSessionId) ensureSessionsInitialized();
+      const targetSessionId = String(sessionId || activeSessionId || "");
+      if (!targetSessionId) {
         endPerf(perf);
         return;
       }
@@ -1790,7 +2267,13 @@ const state = {
         endPerf(perf);
         return;
       }
-      localStorage.setItem(SAVE_KEY, snapshotJson);
+      localStorage.setItem(getSaveSlotKey(targetSessionId), snapshotJson);
+      // Update session metadata.
+      const sessions = readSessionsIndex();
+      const nextSessions = sessions.map((s) => s.id === targetSessionId ? { ...s, updatedAt: nowIso() } : s);
+      writeSessionsIndex(nextSessions);
+      syncSessionSelect();
+      syncMainMenu();
       lastSavedSnapshotJson = snapshotJson;
       autosaveDirty = false;
       endPerf(perf);
@@ -1816,8 +2299,14 @@ const state = {
       return true;
     }
 
-    function loadGameState(silent = false) {
-      const raw = localStorage.getItem(SAVE_KEY);
+    function loadGameState(silent = false, sessionId = "") {
+      if (!activeSessionId) ensureSessionsInitialized();
+      const targetSessionId = String(sessionId || activeSessionId || "");
+      if (!targetSessionId) {
+        if (!silent) logEvent(t("ui.saveNotFound"));
+        return false;
+      }
+      const raw = localStorage.getItem(getSaveSlotKey(targetSessionId));
       if (!raw) {
         if (!silent) logEvent(t("ui.saveNotFound"));
         return false;
@@ -1893,6 +2382,7 @@ const state = {
       createBoard();
       fullRender(false);
       lastSavedSnapshotJson = raw;
+      setActiveSession(targetSessionId);
       if (state.gameEnded) openVictoryOverlay();
       if (!silent) logEvent(t("ui.saveLoaded"));
       return true;
@@ -1901,7 +2391,14 @@ const state = {
     function startNewGameWithSamePlayers() {
       clearTimeout(autosaveTimer);
       cancelIdle();
-      localStorage.removeItem(SAVE_KEY);
+      if (!activeSessionId) ensureSessionsInitialized();
+      if (activeSessionId) {
+        try {
+          localStorage.removeItem(getSaveSlotKey(activeSessionId));
+        } catch (_) {
+          // ignore
+        }
+      }
       lastSavedSnapshotJson = "";
       const nextPlayers = state.players.length ? state.players.map((player) => createFreshPlayerState(player)) : [];
       dispatch({
@@ -1926,10 +2423,14 @@ const state = {
       createBoard();
       fullRender(false);
       logEvent(t("ui.newGameStarted"));
+      if (!suppressTutorialAutostartOnce && tutorialManager && window.TutorialManager && !window.TutorialManager.wasSeen()) {
+        window.setTimeout(() => tutorialManager.start({ force: true }), 250);
+      }
+      suppressTutorialAutostartOnce = false;
     }
 
     function resetGameWithConfirm() {
-      const useFullReset = Boolean(fullResetToggleEl?.checked);
+      const useFullReset = false;
       const confirmed = window.confirm(useFullReset ? t("ui.confirmFullReset") : t("ui.confirmReset"));
       if (!confirmed) return;
       if (useFullReset) {
@@ -1945,7 +2446,25 @@ const state = {
 
       clearTimeout(autosaveTimer);
       cancelIdle();
-      localStorage.removeItem(SAVE_KEY);
+      // Wipe all sessions & saves.
+      const sessions = readSessionsIndex();
+      sessions.forEach((session) => {
+        try {
+          localStorage.removeItem(getSaveSlotKey(session.id));
+        } catch (_) {
+          // ignore
+        }
+      });
+      try {
+        localStorage.removeItem(SESSIONS_INDEX_KEY);
+        localStorage.removeItem(ACTIVE_SESSION_KEY);
+        localStorage.removeItem(SAVE_KEY);
+      } catch (_) {
+        // ignore
+      }
+      activeSessionId = "";
+      ensureSessionsInitialized();
+      syncSessionSelect();
       lastSavedSnapshotJson = "";
       dispatch({
         type: "PATCH",
@@ -1968,6 +2487,46 @@ const state = {
       createBoard();
       fullRender(false);
       logEvent(t("ui.fullResetDone"));
+      if (!suppressTutorialAutostartOnce && tutorialManager && window.TutorialManager && !window.TutorialManager.wasSeen()) {
+        window.setTimeout(() => tutorialManager.start({ force: true }), 250);
+      }
+      suppressTutorialAutostartOnce = false;
+    }
+
+    function startBlankRunInActiveSession() {
+      clearTimeout(autosaveTimer);
+      cancelIdle();
+      if (!activeSessionId) ensureSessionsInitialized();
+      if (activeSessionId) {
+        try {
+          localStorage.removeItem(getSaveSlotKey(activeSessionId));
+        } catch (_) {
+          // ignore
+        }
+      }
+      lastSavedSnapshotJson = "";
+      dispatch({
+        type: "PATCH",
+        patch: {
+          players: [],
+          selectedPlayerId: "",
+          selectedCell: 1,
+          rolling: false,
+          turnIndex: 0,
+          history: [],
+          logEntries: [],
+          gameEnded: false
+        }
+      });
+      renderLogWindow();
+      hideTileContextMenu();
+      closeInventoryOverlay();
+      closeVictoryOverlay();
+      buildCells();
+      createBoard();
+      fullRender(false);
+      logEvent("Game ready. Add players and start the run!");
+      syncMainMenu();
     }
 
     function syncTurnIndexToSelected() {
@@ -2292,6 +2851,7 @@ const state = {
       shopOverlayEl.classList.add("visible");
       lastContextMenuSignature = "";
       refreshCurrentContextMenu(true);
+      emitGameEvent("context-opened", { mode, cellNumber });
     }
 
     function handleBoardContextMenu(event) {
@@ -2489,6 +3049,7 @@ const state = {
       inventoryOverlayEl.dataset.playerId = playerId;
       renderInventoryOverlay();
       inventoryOverlayEl.classList.add("visible");
+      emitGameEvent("inventory-opened", { playerId });
     }
 
     function renderInventoryOverlay() {
@@ -3109,6 +3670,7 @@ const state = {
         return;
       }
 
+      prepareTutorialPlayerForShop(result.player);
       pushHistory("Add player");
       dispatch({
         type: "SET_PLAYERS_AND_TURN",
@@ -3126,6 +3688,7 @@ const state = {
         refreshContextMenu: true,
         tokensFull: true
       }, { autosave: true });
+      emitGameEvent("player-added", { playerId: result.player.id });
     }
 
     function removeSelectedPlayer() {
@@ -3205,6 +3768,50 @@ const state = {
         });
       }
     };
+
+    function openTutorialContextForSelectedPlayer(mode = "shop") {
+      const player = selectedPlayer();
+      if (!player) return;
+      const targetMode = mode || "shop";
+      const configs = getContextModeConfigs();
+      const config = configs[targetMode];
+      if (!config) return;
+
+      let cellNumber = player.position;
+      if (!hasCellType(cellNumber, config.cellType)) {
+        cellNumber = getFirstCellWithType(config.cellType);
+        if (!cellNumber) return;
+        const from = player.position;
+        player.position = cellNumber;
+        markPlayerDirty(player.id, {
+          row: true,
+          stats: true,
+          context: true,
+          inventoryOverlay: true,
+          posFrom: from,
+          posTo: cellNumber
+        });
+      }
+
+      prepareTutorialPlayerForShop(player);
+      state.selectedCell = cellNumber;
+      renderSelectedTile();
+      queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+      openContextMenu(targetMode, cellNumber);
+    }
+
+    function setupTutorial() {
+      if (!window.TutorialManager) return;
+      tutorialManager = new window.TutorialManager({
+        api: {
+          openContextForSelectedPlayer: openTutorialContextForSelectedPlayer,
+          closeContext: hideTileContextMenu,
+          closeInventory: closeInventoryOverlay
+        }
+      });
+    }
+
+    // Tutorial starts on "New game" flow (see reset handlers).
 
     function sleep(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
@@ -3330,7 +3937,7 @@ const state = {
         tokenActiveIds: [player.id]
       });
 
-      const dice = Math.floor(Math.random() * 6) + 1;
+      const dice = getTutorialForcedRoll(player) || (Math.floor(Math.random() * 6) + 1);
       await animateDiceVisual(dice);
       let bonus = 0;
       const actingPlayerId = player.id;
@@ -3388,11 +3995,16 @@ const state = {
       if (actingPlayerAlive) {
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       }
+      if (isTutorialActive() && actingPlayerAlive) {
+        prepareTutorialPlayerForShop(player);
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      }
       queueRenderFromDirty({
         autosave: true,
         selectedTile: true,
         tokenActiveIds: [state.selectedPlayerId, player.id]
       });
+      emitGameEvent("roll-finished", { playerId: player.id, position: player.position });
     }
 
     function undoLastAction() {
@@ -3550,6 +4162,7 @@ const state = {
         }
 
         queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+        emitGameEvent("item-bought", { playerId: player.id, itemId: action, market: "shop" });
 
         // After rerender, highlight the buyer inventory slot that corresponds to this item.
         setTimeout(() => {
@@ -3650,6 +4263,7 @@ const state = {
       state.rolling = false;
       markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+      if (granted) emitGameEvent("item-bought", { playerId: player.id, itemId: action, market: "blackMarket" });
 
       if (granted) {
         setTimeout(() => {
@@ -3823,6 +4437,54 @@ const state = {
       if (installAppBtnEl) {
         installAppBtnEl.addEventListener("click", () => promptInstallApp());
       }
+      if (savePlayersToggleEl) {
+        savePlayersToggleEl.addEventListener("change", () => {
+          try {
+            window.localStorage.setItem(SAVE_PLAYERS_OPTION_KEY, savePlayersToggleEl.checked ? "1" : "0");
+          } catch (_) {
+            // ignore
+          }
+        });
+      }
+      if (tutorialBtnEl) {
+        tutorialBtnEl.addEventListener("click", () => {
+          setSettingsPanelOpen(false);
+          if (!tutorialManager && window.TutorialManager) setupTutorial();
+          window.TutorialManager?.reset();
+          setMainMenuOpen(true);
+          window.setTimeout(() => tutorialManager?.start({ force: true }), 80);
+        });
+      }
+      if (sessionSelectEl) {
+        sessionSelectEl.addEventListener("change", () => {
+          setActiveSession(sessionSelectEl.value);
+        });
+      }
+      if (sessionNewBtnEl) {
+        sessionNewBtnEl.addEventListener("click", () => {
+          createNewSession();
+          startBlankRunInActiveSession();
+        });
+      }
+      if (sessionSaveBtnEl) {
+        sessionSaveBtnEl.addEventListener("click", () => {
+          saveGameState(false, true);
+        });
+      }
+      if (mainMenuContinueBtnEl) {
+        mainMenuContinueBtnEl.addEventListener("click", () => {
+          const continueSessionId = getContinueSessionId();
+          if (!continueSessionId) return;
+          setActiveSession(continueSessionId);
+          const ok = loadGameState(false, continueSessionId);
+          if (ok) setMainMenuOpen(false);
+        });
+      }
+      if (mainMenuSettingsBtnEl) {
+        mainMenuSettingsBtnEl.addEventListener("click", () => {
+          setSettingsPanelOpen(true);
+        });
+      }
       if (sidePanelToggleBtnEl) {
         sidePanelToggleBtnEl.addEventListener("click", () => setSidePanelLeft(!sidePanelLeft));
       }
@@ -3963,10 +4625,76 @@ const state = {
       });
 
       undoBtnEl.addEventListener("click", undoLastAction);
-      saveGameBtnEl.addEventListener("click", () => saveGameState(false, true));
-      loadGameBtnEl.addEventListener("click", loadGameState);
-      newGameBtnEl.addEventListener("click", resetGameWithConfirm);
-      victoryNewGameBtnEl?.addEventListener("click", resetGameWithConfirm);
+      saveGameBtnEl.addEventListener("click", () => {
+        saveGameState(false, true);
+        syncMainMenu();
+      });
+      loadGameBtnEl.addEventListener("click", () => {
+        openSessionPicker();
+      });
+      newGameBtnEl.addEventListener("click", () => {
+        syncConfigMenu();
+        setNewGameSetupOpen(true);
+      });
+      if (newGameStartBtnEl) {
+        newGameStartBtnEl.addEventListener("click", () => startNewGameWithConfig());
+      }
+      if (newGameCloseBtnEl) {
+        newGameCloseBtnEl.addEventListener("click", () => setNewGameSetupOpen(false));
+      }
+      victoryNewGameBtnEl?.addEventListener("click", () => {
+        closeVictoryOverlay();
+        setMainMenuOpen(true);
+      });
+
+      if (sessionPickerCloseBtnEl) {
+        sessionPickerCloseBtnEl.addEventListener("click", () => setSessionPickerOpen(false));
+      }
+      if (sessionPickerCloseIconBtnEl) {
+        sessionPickerCloseIconBtnEl.addEventListener("click", () => setSessionPickerOpen(false));
+      }
+      if (settingsPanelEl) {
+        settingsPanelEl.addEventListener("click", (event) => {
+          if (event.target === settingsPanelEl) setSettingsPanelOpen(false);
+        });
+      }
+      if (newGameSetupEl) {
+        newGameSetupEl.addEventListener("click", (event) => {
+          if (event.target === newGameSetupEl) setNewGameSetupOpen(false);
+        });
+      }
+      if (sessionPickerEl) {
+        sessionPickerEl.addEventListener("click", (event) => {
+          if (event.target === sessionPickerEl) setSessionPickerOpen(false);
+        });
+      }
+      if (sessionPickerLoadBtnEl) {
+        sessionPickerLoadBtnEl.addEventListener("click", () => {
+          const sessionId = String(sessionPickerSelectEl?.value || "");
+          if (!sessionId) return;
+          const ok = loadGameState(false, sessionId);
+          if (!ok) return;
+          setSessionPickerOpen(false);
+          setMainMenuOpen(false);
+        });
+      }
+      if (sessionPickerRenameBtnEl) {
+        sessionPickerRenameBtnEl.addEventListener("click", () => {
+          const sessionId = String(sessionPickerSelectEl?.value || "");
+          if (!sessionId) return;
+          renameSessionById(sessionId);
+        });
+      }
+      if (sessionPickerDeleteBtnEl) {
+        sessionPickerDeleteBtnEl.addEventListener("click", () => {
+          const sessionId = String(sessionPickerSelectEl?.value || "");
+          if (!sessionId) return;
+          const deleted = deleteSessionById(sessionId);
+          if (!deleted) return;
+          // Keep picker usable if the selected session disappeared.
+          syncSessionPickerSelect();
+        });
+      }
       let moveToTileClickTimer = null;
       moveToTileBtnEl.addEventListener("click", () => {
         // Delay single-click so a double-click can override it.
@@ -4086,6 +4814,15 @@ const state = {
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && settingsPanelEl && !settingsPanelEl.classList.contains("is-hidden")) {
           setSettingsPanelOpen(false);
+          return;
+        }
+        if (event.key === "Escape" && newGameSetupEl && !newGameSetupEl.classList.contains("is-hidden")) {
+          setNewGameSetupOpen(false);
+          return;
+        }
+        if (event.key === "Escape" && sessionPickerEl && !sessionPickerEl.classList.contains("is-hidden")) {
+          setSessionPickerOpen(false);
+          return;
         }
         if (event.key === "Escape" && eventJournalEl && !eventJournalEl.classList.contains("is-hidden")) {
           closeLogPanel();
@@ -4093,6 +4830,10 @@ const state = {
         if (event.key === "Escape") hideTileContextMenu();
         if (event.key === "Escape") closeInventoryOverlay();
         if (event.key === "Escape") closeVictoryOverlay();
+        if (event.key === "Escape" && mainMenuEl) {
+          const isOpen = !mainMenuEl.classList.contains("is-hidden");
+          setMainMenuOpen(!isOpen);
+        }
       });
       document.addEventListener("pointerdown", (event) => {
         if (!settingsPanelEl || settingsPanelEl.classList.contains("is-hidden")) return;
@@ -4100,6 +4841,13 @@ const state = {
         if (settingsPanelEl.contains(target)) return;
         if (settingsLauncherEl && settingsLauncherEl.contains(target)) return;
         setSettingsPanelOpen(false);
+      });
+      document.addEventListener("pointerdown", (event) => {
+        if (!newGameSetupEl || newGameSetupEl.classList.contains("is-hidden")) return;
+        if (document.body.classList.contains("tutorial-active")) return;
+        const target = event.target;
+        if (newGameSetupEl.contains(target)) return;
+        setNewGameSetupOpen(false);
       });
 
       window.addEventListener("resize", () => {
@@ -4126,23 +4874,83 @@ const state = {
     }
 
     function init() {
+      ensureSessionsInitialized();
+      let shouldStartPendingNewGame = false;
+      let pendingPlayersSeed = [];
+      let pendingSessionName = "";
+      let shouldResumeTutorial = false;
+      try {
+        shouldStartPendingNewGame = window.localStorage.getItem(PENDING_NEW_GAME_KEY) === "1";
+        if (shouldStartPendingNewGame) window.localStorage.removeItem(PENDING_NEW_GAME_KEY);
+        const pendingPlayersRaw = window.localStorage.getItem(PENDING_NEW_GAME_PLAYERS_KEY);
+        if (pendingPlayersRaw) {
+          const parsed = JSON.parse(pendingPlayersRaw);
+          pendingPlayersSeed = Array.isArray(parsed) ? parsed : [];
+        }
+        window.localStorage.removeItem(PENDING_NEW_GAME_PLAYERS_KEY);
+        pendingSessionName = String(window.localStorage.getItem(PENDING_NEW_GAME_NAME_KEY) || "").trim().slice(0, 40);
+        window.localStorage.removeItem(PENDING_NEW_GAME_NAME_KEY);
+        shouldResumeTutorial = !window.localStorage.getItem(TUTORIAL_SEEN_KEY) && Boolean(window.localStorage.getItem(TUTORIAL_PROGRESS_KEY));
+      } catch (_) {
+        shouldStartPendingNewGame = false;
+        pendingPlayersSeed = [];
+        pendingSessionName = "";
+        shouldResumeTutorial = false;
+      }
       buildCells();
       createBoard();
       bindEvents();
+      setupTutorial();
       syncBoardScaleVars();
       syncSidePanelPosition();
       syncInstallButton();
       applyStaticTranslations();
       syncSettingsTab();
       syncConfigMenu();
+      syncSavePlayersToggle();
       setSettingsPanelOpen(false);
       closeLogPanel();
       renderLogWindow();
-      const loaded = loadGameState(true);
-      applyStaticTranslations();
-      if (!loaded) {
-        fullRender(false);
-        logEvent("Game ready. Add players and start the run!");
+      syncSessionSelect();
+      setActiveSession(activeSessionId);
+      if (shouldStartPendingNewGame) {
+        const createdSession = createNewSession();
+        if (createdSession && pendingSessionName) {
+          setSessionNameById(createdSession.id, pendingSessionName);
+        }
+        if (pendingPlayersSeed.length > 0) {
+          const nextPlayers = pendingPlayersSeed.map((player) => createFreshPlayerState(player));
+          dispatch({
+            type: "PATCH",
+            patch: {
+              players: nextPlayers,
+              selectedPlayerId: nextPlayers[0]?.id || "",
+              selectedCell: 1,
+              rolling: false,
+              turnIndex: 0,
+              history: [],
+              logEntries: [],
+              gameEnded: false
+            }
+          });
+          renderLogWindow();
+          hideTileContextMenu();
+          closeInventoryOverlay();
+          closeVictoryOverlay();
+          buildCells();
+          createBoard();
+          fullRender(false);
+          logEvent(t("ui.newGameStarted"));
+        } else {
+          startBlankRunInActiveSession();
+        }
+        emitGameEvent("new-game-started");
+      }
+      fullRender(false);
+      logEvent("Game ready. Add players and start the run!");
+      setMainMenuOpen(!shouldStartPendingNewGame);
+      if (shouldResumeTutorial) {
+        window.setTimeout(() => tutorialManager?.start(), 120);
       }
 
       if ("serviceWorker" in navigator) {

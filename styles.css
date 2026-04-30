@@ -1459,9 +1459,384 @@
       gap: 8px;
     }
 
+    .tutorial-focus-ring {
+      position: fixed;
+      z-index: 260;
+      border: 2px solid rgba(244, 211, 122, 0.96);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 9999px rgba(5, 4, 6, 0.38),
+        0 0 24px rgba(244, 211, 122, 0.4);
+      pointer-events: none;
+    }
+
+    .tutorial-highlight {
+      z-index: auto !important;
+    }
+
+    .tutorial-tip {
+      position: fixed;
+      z-index: 262;
+      width: min(360px, calc(100vw - 24px));
+      padding: 14px;
+      border: 1px solid rgba(217, 177, 76, 0.45);
+      border-radius: 10px;
+      background: rgba(28, 18, 22, 0.98);
+      color: #f5ead8;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.62);
+      font-family: var(--font-ui);
+    }
+
+    .tutorial-tip h3 {
+      margin: 0 0 8px;
+      color: #f4d37a;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .tutorial-tip p {
+      margin: 0;
+      color: rgba(245, 234, 216, 0.88);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .tutorial-progress {
+      margin-bottom: 6px;
+      color: rgba(245, 234, 216, 0.58);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tutorial-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .tutorial-actions button {
+      min-height: 34px;
+      padding: 7px 12px;
+    }
+
+    .tutorial-actions .tutorial-skip {
+      background: rgba(22, 24, 30, 0.9);
+      color: #d9cfbf;
+    }
+
+    .tutorial-actions .tutorial-next {
+      border-color: rgba(217, 177, 76, 0.52);
+      background: linear-gradient(180deg, #8f6b31, #5c3d1d);
+      color: #fff5dc;
+    }
+
+    .tutorial-actions .tutorial-next:disabled {
+      opacity: 0.72;
+      cursor: default;
+    }
+
     .settings-actions button,
     .settings-section select {
       width: 100%;
+    }
+
+    .main-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 160;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(179, 72, 90, 0.18), transparent 30%),
+        radial-gradient(circle at 82% 14%, rgba(200, 167, 108, 0.12), transparent 28%),
+        radial-gradient(circle at 50% 85%, rgba(123, 35, 52, 0.2), transparent 34%),
+        linear-gradient(145deg, rgba(8, 6, 8, 0.96), rgba(18, 12, 16, 0.96) 45%, rgba(10, 8, 11, 0.96));
+      backdrop-filter: blur(6px);
+    }
+
+    .main-menu.is-hidden {
+      display: none;
+    }
+
+    body.main-menu-open {
+      overflow: hidden;
+    }
+
+    .main-menu-inner {
+      width: min(560px, calc(100vw - 24px));
+      border: 1px solid rgba(200, 167, 108, 0.22);
+      border-radius: 14px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(43, 26, 32, 0.94), rgba(21, 13, 17, 0.96));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 235, 205, 0.04);
+    }
+
+    .main-menu-brand {
+      display: grid;
+      gap: 10px;
+      align-items: center;
+      justify-items: center;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .main-menu-logo {
+      width: 72px;
+      height: 72px;
+      opacity: 0.92;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.55));
+    }
+
+    .main-menu-title {
+      font-family: var(--font-base);
+      font-size: 1.35rem;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      color: #f0d8a2;
+      text-shadow: 0 0 14px rgba(179, 72, 90, 0.28);
+    }
+
+    .main-menu-subtitle {
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      color: rgba(232, 220, 190, 0.78);
+    }
+
+    .main-menu-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .main-menu.show-settings .main-menu-actions,
+    .main-menu.show-settings .main-menu-brand,
+    .main-menu.show-settings .main-menu-footer {
+      display: none;
+    }
+
+    .main-menu.show-new-game .main-menu-actions,
+    .main-menu.show-new-game .main-menu-brand,
+    .main-menu.show-new-game .main-menu-footer,
+    .main-menu.show-new-game #settingsPanel {
+      display: none;
+    }
+
+    .main-menu-actions-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .main-menu-actions button {
+      width: 100%;
+      min-height: 42px;
+      font-size: 0.95rem;
+    }
+
+    .main-menu-footer {
+      margin-top: 14px;
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      color: rgba(232, 220, 190, 0.6);
+      text-align: center;
+    }
+
+    .session-manager {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(200, 167, 108, 0.16);
+      background: rgba(18, 22, 28, 0.58);
+      display: grid;
+      gap: 8px;
+    }
+
+    .session-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #f0e2cb;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .session-manager select {
+      width: 100%;
+    }
+
+    .session-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .session-actions button {
+      width: 100%;
+      min-height: 34px;
+    }
+
+    .session-picker {
+      position: fixed;
+      inset: 0;
+      z-index: 170;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(6, 5, 7, 0.62);
+      backdrop-filter: blur(6px);
+    }
+
+    #mainMenu .settings-panel {
+      position: static;
+      top: auto;
+      right: auto;
+      z-index: auto;
+      width: 100%;
+      max-height: none;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    #mainMenu #newGameSetup {
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    #mainMenu .settings-header {
+      margin-bottom: 12px;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(200, 167, 108, 0.16);
+    }
+
+    #mainMenu .settings-header h2 {
+      margin: 0;
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f0e2cb;
+    }
+
+    #mainMenu .settings-tabs {
+      display: none;
+    }
+
+    #mainMenu .settings-close {
+      min-width: 42px;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(200, 167, 108, 0.24);
+      background: rgba(36, 24, 30, 0.92);
+      color: #f0e2cb;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    #mainMenu .settings-section {
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    #mainMenu .settings-section label,
+    #mainMenu .config-field,
+    #mainMenu .config-range-field {
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+    }
+
+    #mainMenu .settings-actions,
+    #mainMenu .config-editor-actions {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #mainMenu .settings-actions button,
+    #mainMenu .config-editor-actions button {
+      min-height: 42px;
+      font-size: 0.95rem;
+    }
+
+    .session-picker.is-hidden {
+      display: none;
+    }
+
+    .session-picker-inner {
+      width: min(520px, calc(100vw - 24px));
+      border: 1px solid rgba(200, 167, 108, 0.22);
+      border-radius: 14px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(43, 26, 32, 0.96), rgba(21, 13, 17, 0.98));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 235, 205, 0.04);
+      display: grid;
+      gap: 12px;
+      font-family: var(--font-ui);
+    }
+
+    #newGameSetup .session-picker-inner {
+      width: min(760px, calc(100vw - 24px));
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 12px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    #newGameSetup .session-picker-inner::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+
+    .session-picker-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #f0e2cb;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .session-picker-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .session-picker-head .modal-close-btn {
+      min-width: 32px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .session-picker select {
+      width: 100%;
+    }
+
+    .session-picker-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .session-picker-actions button {
+      width: 100%;
+      min-height: 40px;
     }
 
     .install-app-btn {
