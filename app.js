@@ -436,7 +436,7 @@ const state = {
     }
 
     function setSettingsTab(nextTab) {
-      settingsTab = "general";
+      settingsTab = nextTab || "general";
       syncSettingsTab();
     }
 
@@ -575,6 +575,7 @@ const state = {
       if (gameTitleEl) gameTitleEl.textContent = t("app.title");
       document.title = t("app.title");
 
+      if (mainMenuSettingsBtnEl) mainMenuSettingsBtnEl.textContent = t("ui.settingsTitle");
       const legendLabels = TEXTS.legend || {};
       document.querySelectorAll(".legend span[data-legend]").forEach((spanEl) => {
         const key = spanEl.dataset.legend;
@@ -1038,7 +1039,7 @@ const state = {
 
     function buildDefaultSessionName(existingCount) {
       const next = Math.max(1, Number(existingCount) || 0) + 1;
-      return `Сессия ${next}`;
+      return `${t("ui.sessionNameDefault")} ${next}`;
     }
 
     function ensureSessionsInitialized() {
@@ -1060,7 +1061,7 @@ const state = {
       const firstId = generateSessionId();
       const sessions = [{
         id: firstId,
-        name: "Сессия 1",
+        name: `${t("ui.sessionNameDefault")} 1`,
         createdAt: nowIso(),
         updatedAt: nowIso()
       }];
@@ -1080,11 +1081,20 @@ const state = {
     }
 
     function getSessionLabel(session) {
-      const name = String(session?.name || "").trim() || "Сессия";
+      const name = String(session?.name || "").trim() || t("ui.sessionNameDefault");
       const updated = String(session?.updatedAt || "").trim();
       if (!updated) return name;
-      const short = updated.replace("T", " ").replace(/\.\d+Z$/, "Z").replace("Z", "");
-      return `${name} • ${short}`;
+      const date = new Date(updated);
+      if (isNaN(date.getTime())) return `${name} • ${updated}`;
+      const locale = currentLanguage === "en" ? "en-US" : (currentLanguage === "uk" ? "uk-UA" : "ru-RU");
+      const formattedDate = date.toLocaleString(locale, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      return `${name} • ${formattedDate}`;
     }
 
     function syncSessionSelect() {
@@ -1096,6 +1106,10 @@ const state = {
         const option = document.createElement("option");
         option.value = session.id;
         option.textContent = getSessionLabel(session);
+        if (session.finished) {
+          option.className = "session-finished";
+          option.textContent = "✓ " + option.textContent;
+        }
         sessionSelectEl.appendChild(option);
       });
       const target = sessions.some((s) => s.id === activeSessionId) ? activeSessionId : (sessions[0]?.id || "");
@@ -1111,6 +1125,10 @@ const state = {
         const option = document.createElement("option");
         option.value = session.id;
         option.textContent = getSessionLabel(session);
+        if (session.finished) {
+          option.className = "session-finished";
+          option.textContent = "✓ " + option.textContent;
+        }
         sessionPickerSelectEl.appendChild(option);
       });
       const target = sessions.some((s) => s.id === activeSessionId) ? activeSessionId : (sessions[0]?.id || "");
@@ -1145,7 +1163,7 @@ const state = {
     function createNewSession() {
       const sessions = readSessionsIndex();
       const id = generateSessionId();
-      const session = { id, name: buildDefaultSessionName(sessions.length), createdAt: nowIso(), updatedAt: nowIso() };
+      const session = { id, name: buildDefaultSessionName(sessions.length), createdAt: nowIso(), updatedAt: nowIso(), finished: false };
       const next = sessions.concat(session);
       if (!writeSessionsIndex(next)) return null;
       setActiveSession(id);
@@ -1157,7 +1175,7 @@ const state = {
       const clean = String(sessionName || "").trim().slice(0, 40);
       if (!id || !clean) return false;
       const sessions = readSessionsIndex();
-      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean } : s);
       if (!writeSessionsIndex(updated)) return false;
       syncSessionSelect();
       syncSessionPickerSelect();
@@ -1170,11 +1188,11 @@ const state = {
       const sessions = readSessionsIndex();
       const session = sessions.find((s) => s.id === activeSessionId);
       if (!session) return false;
-      const nextName = window.prompt("Название сессии:", String(session.name || "").trim() || "Сессия");
+      const nextName = window.prompt(t("ui.sessionNamePrompt"), String(session.name || "").trim() || t("ui.sessionNameDefault"));
       if (!nextName) return false;
       const clean = String(nextName).trim().slice(0, 40);
       if (!clean) return false;
-      const updated = sessions.map((s) => s.id === activeSessionId ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      const updated = sessions.map((s) => s.id === activeSessionId ? { ...s, name: clean } : s);
       writeSessionsIndex(updated);
       syncSessionSelect();
       syncMainMenu();
@@ -1187,11 +1205,11 @@ const state = {
       const sessions = readSessionsIndex();
       const session = sessions.find((s) => s.id === id);
       if (!session) return false;
-      const nextName = window.prompt("Название сессии:", String(session.name || "").trim() || "Сессия");
+      const nextName = window.prompt(t("ui.sessionNamePrompt"), String(session.name || "").trim() || t("ui.sessionNameDefault"));
       if (!nextName) return false;
       const clean = String(nextName).trim().slice(0, 40);
       if (!clean) return false;
-      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean, updatedAt: nowIso() } : s);
+      const updated = sessions.map((s) => s.id === id ? { ...s, name: clean } : s);
       writeSessionsIndex(updated);
       syncSessionSelect();
       syncSessionPickerSelect();
@@ -1204,7 +1222,7 @@ const state = {
       if (!activeSessionId || sessions.length === 0) return false;
       const session = sessions.find((s) => s.id === activeSessionId);
       if (!session) return false;
-      const ok = window.confirm(`Удалить сессию "${String(session.name || "Сессия")}"? Сохранение этой сессии будет потеряно.`);
+      const ok = window.confirm(t("ui.sessionDeleteConfirm", { name: String(session.name || t("ui.sessionNameDefault")) }));
       if (!ok) return false;
       const remaining = sessions.filter((s) => s.id !== activeSessionId);
       try {
@@ -1232,7 +1250,7 @@ const state = {
       const sessions = readSessionsIndex();
       const session = sessions.find((s) => s.id === id);
       if (!session) return false;
-      const ok = window.confirm(`Удалить сессию "${String(session.name || "Сессия")}"? Сохранение этой сессии будет потеряно.`);
+      const ok = window.confirm(t("ui.sessionDeleteConfirm", { name: String(session.name || t("ui.sessionNameDefault")) }));
       if (!ok) return false;
       const remaining = sessions.filter((s) => s.id !== id);
       try {
@@ -1273,12 +1291,18 @@ const state = {
     }
 
     function getContinueSessionId() {
-      if (hasSessionSave(activeSessionId)) return activeSessionId;
       const sessions = readSessionsIndex();
-      for (let i = sessions.length - 1; i >= 0; i -= 1) {
-        if (hasSessionSave(sessions[i]?.id)) return String(sessions[i].id);
-      }
-      return "";
+      const candidates = sessions.filter((s) => hasSessionSave(s.id));
+      if (candidates.length === 0) return "";
+
+      // Сортируем сессии по времени последнего обновления (updatedAt) в порядке убывания
+      candidates.sort((a, b) => {
+        const timeA = new Date(a.updatedAt || 0).getTime();
+        const timeB = new Date(b.updatedAt || 0).getTime();
+        return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
+      });
+
+      return candidates[0].id;
     }
 
     function hasSavedGame() {
@@ -1323,7 +1347,7 @@ const state = {
       const canContinue = hasSavedGame();
       if (mainMenuContinueBtnEl) {
         mainMenuContinueBtnEl.disabled = !canContinue;
-        mainMenuContinueBtnEl.textContent = canContinue ? "Продолжить" : "Продолжить (нет сохранения)";
+        mainMenuContinueBtnEl.textContent = canContinue ? t("ui.continueGameBtn") : t("ui.continueGameNoSaveBtn");
       }
     }
 
@@ -2270,8 +2294,8 @@ const state = {
       localStorage.setItem(getSaveSlotKey(targetSessionId), snapshotJson);
       // Update session metadata.
       const sessions = readSessionsIndex();
-      const nextSessions = sessions.map((s) => s.id === targetSessionId ? { ...s, updatedAt: nowIso() } : s);
-      writeSessionsIndex(nextSessions);
+      const updated = sessions.map((s) => s.id === targetSessionId ? { ...s, updatedAt: nowIso(), finished: state.gameEnded } : s);
+      writeSessionsIndex(updated);
       syncSessionSelect();
       syncMainMenu();
       lastSavedSnapshotJson = snapshotJson;
@@ -2525,7 +2549,6 @@ const state = {
       buildCells();
       createBoard();
       fullRender(false);
-      logEvent("Game ready. Add players and start the run!");
       syncMainMenu();
     }
 
@@ -3835,6 +3858,11 @@ const state = {
         });
         await sleep(stepDelay);
       }
+      if (player.position !== targetCell) {
+        const lastPos = player.position;
+        player.position = targetCell;
+        queueRender({}, { tokenPositions: [lastPos, targetCell], tokenActiveIds: [player.id] });
+      }
     }
 
     function eliminatePlayerFromGame(player, reasonText) {
@@ -4464,6 +4492,7 @@ const state = {
         sessionNewBtnEl.addEventListener("click", () => {
           createNewSession();
           startBlankRunInActiveSession();
+        logEvent(t("ui.gameReady"));
         });
       }
       if (sessionSaveBtnEl) {
@@ -4702,7 +4731,7 @@ const state = {
         moveToTileClickTimer = setTimeout(() => {
           moveToTileClickTimer = null;
           void moveSelectedPlayerToChosenTile({ instant: false });
-        }, 220);
+        }, 300);
       });
       moveToTileBtnEl.addEventListener("dblclick", (event) => {
         event.preventDefault();
@@ -4947,7 +4976,7 @@ const state = {
         emitGameEvent("new-game-started");
       }
       fullRender(false);
-      logEvent("Game ready. Add players and start the run!");
+      logEvent(t("ui.gameReady"));
       setMainMenuOpen(!shouldStartPendingNewGame);
       if (shouldResumeTutorial) {
         window.setTimeout(() => tutorialManager?.start(), 120);
@@ -4963,6 +4992,3 @@ const state = {
     }
 
     init();
-
-
-

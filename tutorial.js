@@ -1,60 +1,9 @@
-﻿(function (global) {
+﻿﻿(function (global) {
   "use strict";
 
   const SEEN_KEY = "alchemist_dungeon_tutorial_seen_v1";
   const PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v1";
   const ACTIVE_CLASS = "tutorial-active";
-
-const copy = {
-    newGame: {
-      title: "Создание новой игры",
-      body: "Шаг 1: откройте меню новой игры, настройте параметры и запустите сессию. После этого продолжаем обучение."
-    },
-    welcome: {
-      title: "Первый ритуал",
-      body: "Пройдем короткий сценарий: создадим игрока, бросим кость, откроем лавку, купим предмет, посмотрим инвентарь и хроники."
-    },
-    playerName: {
-      title: "Имя посвященного",
-      body: "Введите имя первого игрока. Можно взять любое короткое имя."
-    },
-    addPlayer: {
-      title: "Откройте круг",
-      body: "Нажмите кнопку призыва. Игрок появится в очереди хода и станет активным."
-    },
-    roll: {
-      title: "Первый ход",
-      body: "Бросьте кость. В обучении первый бросок приведет игрока к лавке и даст достаточно золота для покупки."
-    },
-    board: {
-      title: "Поле",
-      body: "Токен стоит на клетке. Цвета и знаки показывают события: проклятие, лавку, оракула, алтарь, теневой торг и финиш."
-    },
-    shop: {
-      title: "Лавка",
-      body: "Откройте лавку для игрока на торговой клетке. В обычной игре это можно сделать контекстным кликом по клетке."
-    },
-    buy: {
-      title: "Покупка",
-      body: "Купите любой предмет. Предмет появится в реликвиях игрока, а золото спишется."
-    },
-    inventory: {
-      title: "Инвентарь",
-      body: "Откройте игрока, чтобы увидеть HP, золото, предметы и активные эффекты."
-    },
-    keeper: {
-      title: "Воля Хранителя",
-      body: "Эта панель нужна ведущему: можно выдать золото или предмет, наказать, перенести на выбранную клетку и отменить ход."
-    },
-    logs: {
-      title: "Хроники",
-      body: "Откройте логи. Там собирается история ритуала, ее можно фильтровать и копировать."
-    },
-    done: {
-      title: "Круг открыт",
-      body: "Обучение завершено. Цель партии проста: провести избранников к Святилищу."
-    }
-  };
 
   function storageGet(key, fallback = "") {
     try {
@@ -255,13 +204,13 @@ const copy = {
 
     renderStep(step, target) {
       const progress = `${Math.min(this.index + 1, this.steps.length)} / ${this.steps.length}`;
-      const actionLabel = step.actionLabel || "Далее";
+      const actionLabel = step.actionLabel || (global.GAME_I18N ? global.GAME_I18N.t("ui.tutorialNext") : "Далее");
       this.tipEl.innerHTML = `
         <div class="tutorial-progress">${progress}</div>
         <h3>${step.title}</h3>
         <p>${step.body}</p>
         <div class="tutorial-actions">
-          <button class="tutorial-skip" type="button">Пропустить</button>
+          <button class="tutorial-skip" type="button">${global.GAME_I18N ? global.GAME_I18N.t("ui.tutorialSkip") : "Пропустить"}</button>
           <button class="tutorial-next" type="button">${actionLabel}</button>
         </div>
       `;
@@ -297,33 +246,36 @@ const copy = {
       });
     }
     createSteps() {
+      const t = (path) => global.GAME_I18N ? global.GAME_I18N.t(path) : "";
+
       return [
         {
-          title: "Шаг 1",
-          body: "Нажмите «Новая игра», чтобы открыть параметры новой сессии.",
+          title: t("tutorial.step1Title"),
+          body: t("tutorial.step1Body"),
           target: "#newGameBtn",
           waitFor: () => waitForEvent("game:new-game-menu-opened")
         },
         {
-          title: "Шаг 2",
-          body: "Заполните название игры/сохранения.",
+          title: t("tutorial.step2Title"),
+          body: t("tutorial.step2Body"),
           target: "#newGameNameInput"
         },
         {
-          title: "Шаг 3",
-          body: "При необходимости настройте параметры игры.",
+          title: t("tutorial.step3Title"),
+          body: t("tutorial.step3Body"),
           target: "#configBoardSize"
         },
         {
-          title: "Шаг 4",
-          body: "Нажмите «Старт новой игры». После запуска обучение продолжится в самой игре.",
+          title: t("tutorial.step4Title"),
+          body: t("tutorial.step4Body"),
           target: "#newGameStartBtn",
           waitFor: () => waitForEvent("game:new-game-started")
         },
         {
-          ...copy.playerName,
+          title: t("tutorial.playerName.title"),
+          body: t("tutorial.playerName.body"),
           target: "#playerName",
-          actionLabel: "Ввести имя",
+          actionLabel: t("tutorial.playerNameAction"),
           action: async () => {
             const input = document.getElementById("playerName");
             if (input && !input.value.trim()) {
@@ -334,32 +286,41 @@ const copy = {
           }
         },
         {
-          ...copy.addPlayer,
+          title: t("tutorial.addPlayer.title"),
+          body: t("tutorial.addPlayer.body"),
           target: "#addPlayerBtn",
           waitFor: () => waitForEvent("game:player-added")
         },
         {
-          ...copy.roll,
+          title: t("tutorial.roll.title"),
+          body: t("tutorial.roll.body"),
           target: "#rollBtn",
           waitFor: () => waitForEvent("game:roll-finished")
         },
-        { ...copy.board, target: ".board-wrap" },
         {
-          ...copy.shop,
+          title: t("tutorial.board.title"),
+          body: t("tutorial.board.body"),
+          target: ".board-wrap"
+        },
+        {
+          title: t("tutorial.shop.title"),
+          body: t("tutorial.shop.body"),
           target: "#board",
-          actionLabel: "Открыть лавку",
+          actionLabel: t("tutorial.shopAction"),
           action: async () => {
             this.api.openContextForSelectedPlayer?.("shop");
             await waitFrame();
           }
         },
         {
-          ...copy.buy,
+          title: t("tutorial.buy.title"),
+          body: t("tutorial.buy.body"),
           target: "#shopItemsList",
           waitFor: () => waitForEvent("game:item-bought")
         },
         {
-          ...copy.inventory,
+          title: t("tutorial.inventory.title"),
+          body: t("tutorial.inventory.body"),
           target: ".token.active, .token",
           before: async () => {
             this.api.closeContext?.();
@@ -367,9 +328,14 @@ const copy = {
           },
           waitFor: () => waitForEvent("game:inventory-opened")
         },
-        { ...copy.keeper, target: ".tools-grid" },
         {
-          ...copy.logs,
+          title: t("tutorial.keeper.title"),
+          body: t("tutorial.keeper.body"),
+          target: ".tools-grid"
+        },
+        {
+          title: t("tutorial.logs.title"),
+          body: t("tutorial.logs.body"),
           target: "#eventJournalLauncher",
           before: async () => {
             this.api.closeInventory?.();
@@ -377,12 +343,15 @@ const copy = {
           },
           waitFor: () => waitForEvent("game:logs-opened")
         },
-        { ...copy.done, target: "#gameTitle", actionLabel: "Играть" }
+        {
+          title: t("tutorial.done.title"),
+          body: t("tutorial.done.body"),
+          target: "#gameTitle",
+          actionLabel: t("tutorial.doneAction")
+        }
       ];
     }
   }
 
   global.TutorialManager = TutorialManager;
 })(window);
-
-

@@ -4,50 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#120e12" />
-  <title>Катакомбы Культа</title>
+  <title data-i18n="app.title">Катакомбы Культа</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <section id="mainMenu" class="main-menu is-hidden" aria-label="Главное меню">
+  <section id="mainMenu" class="main-menu is-hidden" aria-label="Главное меню" data-i18n-aria-label="app.mainMenuAriaLabel">
     <div class="main-menu-inner">
       <div class="main-menu-brand">
         <img class="main-menu-logo" src="./icon.svg" alt="" aria-hidden="true" />
-        <div class="main-menu-title">Катакомбы Культа</div>
-        <div class="main-menu-subtitle">Панель ведущего для настольного ритуала</div>
+        <div class="main-menu-title" data-i18n="app.title">Катакомбы Культа</div>
+        <div class="main-menu-subtitle" data-i18n="app.subtitle">Панель ведущего для настольного ритуала</div>
       </div>
       <div class="main-menu-actions">
         <div class="main-menu-actions-row">
-          <button id="mainMenuContinueBtn" class="primary" type="button">Продолжить</button>
+          <button id="mainMenuContinueBtn" class="primary" type="button" data-i18n="ui.continueGameBtn">Продолжить</button>
         </div>
         <div class="main-menu-actions-row">
           <button id="newGameBtn" type="button" data-i18n="ui.newGameBtn">Новая игра</button>
-          <button id="tutorialBtn" type="button">Обучение</button>
+          <button id="tutorialBtn" type="button" data-i18n="ui.tutorialBtn">Обучение</button>
         </div>
         <div class="main-menu-actions-row">
           <button id="saveGameBtn" type="button" data-i18n="ui.saveBtn">Сохранить печать</button>
           <button id="loadGameBtn" type="button" data-i18n="ui.loadBtn">Восстановить печать</button>
         </div>
-        <button id="mainMenuSettingsBtn" type="button">Настройки</button>
+        <button id="mainMenuSettingsBtn" type="button" data-i18n="ui.settingsTitle">Настройки</button>
         <button id="installAppBtn" class="install-app-btn" type="button" hidden data-i18n="ui.installAppBtn">Установить приложение</button>
       </div>
-      <div class="main-menu-footer">
+      <div class="main-menu-footer" data-i18n="ui.closeMenuHint">
         <span>Esc — закрыть меню</span>
       </div>
-  <section id="newGameSetup" class="session-picker is-hidden" aria-label="Создание новой игры">
+    </div>
+  </section>
+  <section id="newGameSetup" class="session-picker is-hidden" aria-label="Создание новой игры" data-i18n-aria-label="ui.newGameSetupAriaLabel">
     <div class="session-picker-inner settings-config-section" role="dialog" aria-modal="true">
       <div class="session-picker-head">
-        <div class="session-picker-title">Создание новой игры</div>
-        <button id="newGameCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+        <div class="session-picker-title" data-i18n="ui.newGameSetupTitle">Создание новой игры</div>
+        <button id="newGameCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть" data-i18n-aria-label="ui.settingsClose">×</button>
       </div>
-          <div class="config-menu-hint">Настройки конфига применятся при старте новой игры.</div>
+          <div class="config-menu-hint" data-i18n="ui.newGameConfigHint">Настройки конфига применятся при старте новой игры.</div>
           <div class="session-picker-actions">
-            <button id="newGameStartBtn" class="primary" type="button">Старт новой игры</button>
+            <button id="newGameStartBtn" class="primary" type="button" data-i18n="ui.startGameBtn">Старт новой игры</button>
           </div>
           <label class="config-field">
-            <span>Название игры/сохранения</span>
-            <input id="newGameNameInput" type="text" maxlength="40" placeholder="Например: Вечерняя партия" />
+            <span data-i18n="ui.newGameNameLabel">Название игры/сохранения</span>
+            <input id="newGameNameInput" type="text" maxlength="40" placeholder="Например: Вечерняя партия" data-i18n-placeholder="ui.newGameNamePlaceholder" />
           </label>
           <label class="config-field">
             <span data-i18n="ui.configBoardSize">Размер поля</span>
@@ -83,7 +85,7 @@
           </label>
           <label class="config-range-field">
             <div class="config-range-label">
-              <span data-i18n="ui.configBlackMarketProfitChance">Прибыльный рынок</span>
+              <span data-i18n="ui.configBlackMarketProfitChance">Шанс получить предмет</span>
               <span id="blackMarketProfitChanceValue" class="config-range-value"></span>
             </div>
             <input id="configBlackMarketProfitChance" type="range" min="0" max="100" step="1" />
@@ -101,84 +103,82 @@
           </div>
         </div>
       </section>
-  <section id="settingsPanel" class="session-picker is-hidden" aria-label="Настройки">
+  <section id="settingsPanel" class="session-picker is-hidden" aria-label="Настройки" data-i18n-aria-label="ui.settingsAriaLabel">
     <div class="session-picker-inner" role="dialog" aria-modal="true">
       <div class="session-picker-head">
         <div class="session-picker-title" data-i18n="ui.settingsTitle">Настройки</div>
-        <button id="settingsCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+        <button id="settingsCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть" data-i18n-aria-label="ui.settingsClose">×</button>
       </div>
           <div class="settings-section" data-settings-tab-panel="general">
             <label for="languageSelect" data-i18n="app.languageLabel">Язык</label>
-            <select id="languageSelect" aria-label="Язык">
-              <option value="ru">Русский</option>
-              <option value="en">English</option>
-              <option value="uk">Українська</option>
+            <select id="languageSelect" aria-label="Язык" data-i18n-aria-label="app.languageLabel">
+              <option value="ru" data-i18n="app.languageRu">Русский</option>
+              <option value="en" data-i18n="app.languageEn">English</option>
+              <option value="uk" data-i18n="app.languageUk">Українська</option>
             </select>
           </div>
       <div class="session-picker-actions">
-        <button id="sidePanelToggleBtn" type="button">← Панель влево</button>
+        <button id="sidePanelToggleBtn" type="button" data-i18n="ui.sidePanelToggleLeft">← Панель влево</button>
       </div>
           <div class="settings-actions">
-            <label class="reset-all-toggle" title="Сохранение игроков между новыми играми">
+            <label class="reset-all-toggle" title="Сохранение игроков между новыми играми" data-i18n-title="ui.savePlayersToggleHint">
               <input id="savePlayersToggle" type="checkbox" />
-              <span>Сохранять игроков</span>
+              <span data-i18n="ui.savePlayersToggleLabel">Сохранять игроков</span>
             </label>
           </div>
         </div>
       </section>
-    </div>
-  </section>
-  <section id="sessionPicker" class="session-picker is-hidden" aria-label="Загрузка сессии">
+  <section id="sessionPicker" class="session-picker is-hidden" aria-label="Загрузка сессии" data-i18n-aria-label="ui.sessionPickerAriaLabel">
     <div class="session-picker-inner" role="dialog" aria-modal="true">
       <div class="session-picker-head">
-        <div class="session-picker-title">Выберите сессию</div>
-        <button id="sessionPickerCloseIconBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+        <div class="session-picker-title" data-i18n="ui.selectSessionTitle">Выберите сессию</div>
+        <button id="sessionPickerCloseIconBtn" class="modal-close-btn" type="button" aria-label="Закрыть" data-i18n-aria-label="ui.settingsClose">×</button>
       </div>
-      <select id="sessionPickerSelect" aria-label="Сессия для загрузки"></select>
+      <select id="sessionPickerSelect" aria-label="Сессия для загрузки" data-i18n-aria-label="ui.selectSessionAriaLabel"></select>
       <div class="session-picker-actions">
-        <button id="sessionPickerLoadBtn" class="primary" type="button">Загрузить</button>
+        <button id="sessionPickerLoadBtn" class="primary" type="button" data-i18n="ui.loadBtn">Загрузить</button>
       </div>
       <div class="session-picker-actions">
-        <button id="sessionPickerRenameBtn" type="button">Переименовать</button>
-        <button id="sessionPickerDeleteBtn" type="button">Удалить</button>
+        <button id="sessionPickerRenameBtn" type="button" data-i18n="ui.renameSessionBtn">Переименовать</button>
+        <button id="sessionPickerDeleteBtn" type="button" data-i18n="ui.deleteSessionBtn">Удалить</button>
       </div>
     </div>
   </section>
   <div class="layout">
     <section class="board-panel">
-      <h1 id="gameTitle">Катакомбы Культа</h1>
+      <h1 id="gameTitle" data-i18n="app.title">Катакомбы Культа</h1>
       <div class="board-wrap">
         <div id="board" class="board-grid"></div>
         <canvas id="boardStaticLayer" class="board-static-layer" aria-hidden="true"></canvas>
         <div id="tokensLayer" class="tokens-layer"></div>
       </div>
       <div class="legend">
-        <span data-legend="normal"><i class="dot dot-normal"></i>Пустошь</span>
-        <span data-legend="trap"><i class="dot dot-trap"></i>Проклятие</span>
-        <span data-legend="shop"><i class="dot dot-shop"></i>Лавка торговца</span>
-        <span data-legend="blackMarket"><i class="dot dot-black-market"></i>Теневой торг</span>
-        <span data-legend="altar"><i class="dot dot-altar"></i>Кровавый алтарь</span>
-        <span data-legend="fortuneTeller"><i class="dot dot-fortune"></i>Оракул</span>
-        <span data-legend="finish"><i class="dot dot-finish"></i>Святилище</span>
+        <span data-legend="normal" data-i18n="legend.normal"><i class="dot dot-normal"></i>Пустошь</span>
+        <span data-legend="trap" data-i18n="legend.trap"><i class="dot dot-trap"></i>Проклятие</span>
+        <span data-legend="shop" data-i18n="legend.shop"><i class="dot dot-shop"></i>Лавка торговца</span>
+        <span data-legend="blackMarket" data-i18n="legend.blackMarket"><i class="dot dot-black-market"></i>Теневой торг</span>
+        <span data-legend="altar" data-i18n="legend.altar"><i class="dot dot-altar"></i>Кровавый алтарь</span>
+        <span data-legend="fortuneTeller" data-i18n="legend.fortuneTeller"><i class="dot dot-fortune"></i>Оракул</span>
+        <span data-legend="finish" data-i18n="legend.finish"><i class="dot dot-finish"></i>Святилище</span>
       </div>
     </section>
 
     <aside class="side-panel">
       <section class="gm-card">
         <h2 data-i18n="ui.playersSectionTitle">Круг Посвященных</h2>
-        <div class="players-menu">
+        <div class="players-menu"> 
           <div class="players-menu-title" data-i18n="ui.playersMenuTitle">Список носителей печати (очередь хода)</div>
           <label for="playerName" data-i18n="ui.playerNameLabel">Имя посвященного</label>
           <div class="control-row mb-8">
             <input id="playerName" type="text" placeholder="Например: Артем" maxlength="16" data-i18n-placeholder="ui.playerNamePlaceholder" />
             <button id="addPlayerBtn" data-i18n="ui.addPlayerBtn">Призвать в круг</button>
           </div>
-          <div id="playersList" class="players-list">
-            <div class="players-empty">Призовите посвященных, чтобы открыть круг хода.</div>
+          <div id="playersList" class="players-list"> 
+            <div class="players-empty" data-i18n="ui.playersEmpty">Призовите посвященных, чтобы открыть круг хода.</div>
           </div>
         </div>
         <select id="activePlayerSelect" style="display:none;">
-          <option value="">-- Посвященный не выбран --</option>
+          <option value="" data-i18n="ui.activePlayerNone">-- Посвященный не выбран --</option>
         </select>
         <div class="turn-box">
           <div id="turnInfo"></div>
@@ -203,7 +203,7 @@
               <div class="dice-face dice-bottom"><span class="pip p1"></span><span class="pip p3"></span><span class="pip p5"></span><span class="pip p7"></span><span class="pip p9"></span></div>
             </div>
           </div>
-          <div id="diceResult" class="dice-result">Результат: -</div>
+          <div id="diceResult" class="dice-result" data-i18n="ui.diceResultIdle">Результат: -</div>
         </div>
         <button id="rollBtn" class="primary mt-8" data-i18n="ui.rollBtn">🎲 Бросить кость знака</button>
       </section>
@@ -225,9 +225,9 @@
 
     </aside>
   </div>
-  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
-  <button id="eventJournalLauncher" class="event-journal-launcher" type="button" aria-controls="eventJournal" aria-expanded="false" aria-label="Логи" title="Логи">≡</button>
-  <section id="eventJournal" class="event-journal is-hidden" aria-label="Логи">
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div> 
+  <button id="eventJournalLauncher" class="event-journal-launcher" type="button" aria-controls="eventJournal" aria-expanded="false" aria-label="Логи" title="Логи" data-i18n-aria-label="eventJournal.button" data-i18n-title="eventJournal.button">≡</button>
+  <section id="eventJournal" class="event-journal is-hidden" aria-label="Логи" data-i18n-aria-label="eventJournal.button">
     <div class="event-journal-header">
       <div class="event-journal-title" data-i18n="eventJournal.title">Хроники ритуала</div>
       <div class="event-journal-actions">
@@ -235,7 +235,7 @@
       </div>
     </div>
     <div class="event-journal-filter">
-      <label for="logFilterSelect" data-i18n="eventJournal.filterLabel">Фильтр</label>
+      <label for="logFilterSelect" data-i18n="eventJournal.filterLabel">Фильтр</label> 
       <select id="logFilterSelect" aria-label="Фильтр логов">
         <option value="all" data-i18n="eventJournal.filterAll">Все</option>
         <option value="system" data-i18n="eventJournal.filterSystem">Системные</option>
@@ -251,27 +251,27 @@
   </section>
   <div id="shopOverlay" class="inventory-overlay">
     <div id="tileContextMenu" class="tile-context">
-      <div class="inventory-header">
-        <h3 id="tileContextTitle" class="inventory-title">Магазин</h3>
-        <button id="closeShopBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть">×</button>
+      <div class="inventory-header"> 
+        <h3 id="tileContextTitle" class="inventory-title" data-i18n="context.shopTitle">Магазин</h3>
+        <button id="closeShopBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть" data-i18n-aria-label="ui.closePanel">×</button>
       </div>
       <div class="inventory-body">
-        <div id="tileContextSubtitle" class="tile-context-subtitle">ЛКМ по товару: купить за золото выбранного игрока, который сейчас в магазине</div>
-        <label id="tileContextPlayerLabel" class="mb-4" for="shopBuyerSelect">Носитель печати</label>
+        <div id="tileContextSubtitle" class="tile-context-subtitle" data-i18n="context.shopSubtitle">ЛКМ по товару: купить за золото выбранного игрока, который сейчас в магазине</div>
+        <label id="tileContextPlayerLabel" class="mb-4" for="shopBuyerSelect" data-i18n="context.playerLabelShop">Носитель печати</label>
         <select id="shopBuyerSelect" class="mb-8"></select>
         <div id="shopContextSection" class="tile-context-section visible">
           <div id="shopItemsList" class="inventory-slots shop-items"></div>
           <div class="shop-player-box">
-            <div class="shop-player-title">Реликвии носителя</div>
-            <div class="tile-context-subtitle mb-6">Клик по предмету ниже: передать 1 шт. за 50% цены</div>
+            <div class="shop-player-title" data-i18n="ui.playerInventoryTitle">Реликвии носителя</div>
+            <div class="tile-context-subtitle mb-6" data-i18n="context.shopSellHint">Клик по предмету ниже: передать 1 шт. за 50% цены</div>
             <div id="shopPlayerMeta" class="shop-player-meta"></div>
             <div id="shopPlayerInventory" class="inventory-slots"></div>
           </div>
         </div>
         <div id="fortuneContextSection" class="tile-context-section">
-          <p id="fortuneText" class="fortune-copy">Знамение проявится после выбора носителя печати.</p>
-          <div id="fortunePlayerMeta" class="shop-player-meta"></div>
-          <button id="fortuneActionBtn" class="primary" data-fortune-action="tell">Принять знамение (25💰)</button>
+          <p id="fortuneText" class="fortune-copy" data-i18n="context.fortunePlaceholder">Знамение проявится после выбора носителя печати.</p>
+          <div id="fortunePlayerMeta" class="shop-player-meta"></div> 
+          <button id="fortuneActionBtn" class="primary" data-fortune-action="tell" data-i18n="context.fortuneAction">Принять знамение (25💰)</button>
         </div>
         <div id="blackMarketContextSection" class="tile-context-section">
           <div id="blackMarketPlayerMeta" class="shop-player-meta"></div>
@@ -286,15 +286,15 @@
   </div>
   <div id="inventoryOverlay" class="inventory-overlay">
     <div class="inventory-modal">
-      <div class="inventory-header">
+      <div class="inventory-header"> 
         <div class="player-header">
-          <span id="inventoryName" class="player-name">Игрок</span>
+          <span id="inventoryName" class="player-name" data-i18n="ui.inventoryName">Игрок</span>
           <span class="player-meta">
             <span id="inventoryHp" class="player-gold">0/0 ❤️</span>
             <span id="inventoryGold" class="player-gold">0 💰</span>
           </span>
         </div>
-        <button id="closeInventoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть">×</button>
+        <button id="closeInventoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть" data-i18n-aria-label="ui.closePanel">×</button>
       </div>
       <div id="inventoryBody" class="inventory-body"></div>
     </div>
@@ -302,8 +302,8 @@
   <div id="victoryOverlay" class="inventory-overlay">
     <div class="inventory-modal victory-modal">
       <div class="inventory-header">
-        <h3 class="inventory-title" data-i18n="ui.victoryTitle">Святилище признало избранных</h3>
-        <button id="closeVictoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть">×</button>
+        <h3 class="inventory-title" data-i18n="ui.victoryTitle">Святилище признало избранных</h3> 
+        <button id="closeVictoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть" data-i18n-aria-label="ui.closePanel">×</button>
       </div>
       <div id="victoryBody" class="inventory-body"></div>
       <div class="victory-actions">
