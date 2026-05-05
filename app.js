@@ -1,4 +1,4 @@
-let CONFIG = window.GAME_CONFIG;
+﻿let CONFIG = window.GAME_CONFIG;
 const CONFIG_OVERRIDES_STORAGE_KEY = "alchemist_dungeon_config_overrides_v1";
 const PENDING_NEW_GAME_KEY = "alchemist_dungeon_pending_new_game_v1";
 const SAVE_PLAYERS_OPTION_KEY = "alchemist_dungeon_save_players_v1";
@@ -67,6 +67,21 @@ CONFIG = window.GAME_CONFIG;
     const CELL_TYPE_META = CONFIG.CELL_TYPE_META;
     const CELL_TYPE_COLORS = CONFIG.CELL_TYPE_COLORS;
     const SIDE_PANEL_LEFT_KEY = "alchemist_dungeon_side_panel_left_v1";
+    if (!window.GAME_I18N) {
+      window.GAME_I18N = {
+        bundles: { ru: {} },
+        DEFAULT_LANGUAGE: "ru",
+        getPreferredLanguage: (_k, d) => d || "ru",
+        getBundle: () => ({}),
+        localizeValue: (v) => v,
+        getShopItemName: (item) => String(item?.name || ""),
+        getShopItemDesc: (item) => String(item?.desc || ""),
+        getPhaseLabel: (key) => String(key || ""),
+        t: (path) => String(path || ""),
+        translateLogMessage: (text) => String(text || ""),
+        setLanguageKey: () => {}
+      };
+    }
     const SUPPORTED_LANGUAGES = window.GAME_I18N.bundles || { ru: {} };
     const DEFAULT_LANGUAGE = window.GAME_I18N.DEFAULT_LANGUAGE || CONFIG.DEFAULT_LANGUAGE || "ru";
     let currentLanguage = window.GAME_I18N.getPreferredLanguage(LANGUAGE_STORAGE_KEY, DEFAULT_LANGUAGE);
@@ -97,123 +112,145 @@ const state = {
       gameEnded: false
     };
     const STATE_VERSION = 5;
+    const elementCache = new Map();
+
+    function getEl(id) {
+      if (elementCache.has(id)) {
+        return elementCache.get(id);
+      }
+      const el = id === "boardWrap"
+        ? document.querySelector(".board-wrap")
+        : document.getElementById(id);
+      if (el) {
+        elementCache.set(id, el);
+      }
+      return el;
+    }
 
       const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="#2a2a2a" width="100%" height="100%"/><text x="50%" y="50%" dy=".35em" font-size="28" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif">?</text></svg>');
 
-    const boardEl = document.getElementById("board");
-    const boardWrapEl = document.querySelector(".board-wrap");
-    const boardStaticLayerEl = document.getElementById("boardStaticLayer");
-    const tokensLayerEl = document.getElementById("tokensLayer");
-    const gameTitleEl = document.getElementById("gameTitle");
-    const mainMenuEl = document.getElementById("mainMenu");
-    const mainMenuContinueBtnEl = document.getElementById("mainMenuContinueBtn");
-    const mainMenuSettingsBtnEl = document.getElementById("mainMenuSettingsBtn");
-    const settingsLauncherEl = document.getElementById("settingsLauncher");
-    const settingsPanelEl = document.getElementById("settingsPanel");
-    const settingsCloseBtnEl = document.getElementById("settingsCloseBtn");
-    const settingsGeneralTabBtnEl = document.getElementById("settingsGeneralTabBtn");
-    const settingsConfigTabBtnEl = document.getElementById("settingsConfigTabBtn");
-    const sidePanelToggleBtnEl = document.getElementById("sidePanelToggleBtn");
-    const languageSelectEl = document.getElementById("languageSelect");
-    const configBoardSizeEl = document.getElementById("configBoardSize");
-    const configPlayerMaxHpEl = document.getElementById("configPlayerMaxHp");
-    const configGoldPerMoveEl = document.getElementById("configGoldPerMove");
-    const configInventorySlotsEl = document.getElementById("configInventorySlots");
-    const configAutosaveDelayEl = document.getElementById("configAutosaveDelay");
-    const configFinishersToEndGameEl = document.getElementById("configFinishersToEndGame");
-    const configFortuneGoodChanceEl = document.getElementById("configFortuneGoodChance");
-    const configBlackMarketProfitChanceEl = document.getElementById("configBlackMarketProfitChance");
-    const configAltarShieldChanceEl = document.getElementById("configAltarShieldChance");
-    const fortuneGoodChanceValueEl = document.getElementById("fortuneGoodChanceValue");
-    const blackMarketProfitChanceValueEl = document.getElementById("blackMarketProfitChanceValue");
-    const altarShieldChanceValueEl = document.getElementById("altarShieldChanceValue");
-    const configLastCellPreviewEl = document.getElementById("configLastCellPreview");
-    const configEditorStatusEl = document.getElementById("configEditorStatus");
-    const saveConfigBtnEl = document.getElementById("saveConfigBtn");
-    const resetConfigBtnEl = document.getElementById("resetConfigBtn");
-    const toastContainerEl = document.getElementById("toastContainer");
-    const eventJournalLauncherEl = document.getElementById("eventJournalLauncher");
-    const eventJournalEl = document.getElementById("eventJournal");
-    const copyLogsBtnEl = document.getElementById("copyLogsBtn");
-    const logFilterSelectEl = document.getElementById("logFilterSelect");
-    const logBoxEl = document.getElementById("logBox");
-    const playerNameEl = document.getElementById("playerName");
-    const addPlayerBtnEl = document.getElementById("addPlayerBtn");
-    const playersListEl = document.getElementById("playersList");
-    const activePlayerSelectEl = document.getElementById("activePlayerSelect");
-    const turnInfoEl = document.getElementById("turnInfo");
-    const turnListEl = document.getElementById("turnList");
-    const nextTurnBtnEl = document.getElementById("nextTurnBtn");
-    const undoBtnEl = document.getElementById("undoBtn");
-    const saveGameBtnEl = document.getElementById("saveGameBtn");
-    const loadGameBtnEl = document.getElementById("loadGameBtn");
-    const newGameBtnEl = document.getElementById("newGameBtn");
-    const newGameSetupEl = document.getElementById("newGameSetup");
-    const newGameStartBtnEl = document.getElementById("newGameStartBtn");
-    const newGameCloseBtnEl = document.getElementById("newGameCloseBtn");
-    const newGameNameInputEl = document.getElementById("newGameNameInput");
-    const savePlayersToggleEl = document.getElementById("savePlayersToggle");
-    const installAppBtnEl = document.getElementById("installAppBtn");
-    const tutorialBtnEl = document.getElementById("tutorialBtn");
-    const sessionSelectEl = document.getElementById("sessionSelect");
-    const sessionNewBtnEl = document.getElementById("sessionNewBtn");
-    const sessionSaveBtnEl = document.getElementById("sessionSaveBtn");
-    const sessionPickerEl = document.getElementById("sessionPicker");
-    const sessionPickerSelectEl = document.getElementById("sessionPickerSelect");
-    const sessionPickerCloseBtnEl = document.getElementById("sessionPickerCloseBtn");
-    const sessionPickerCloseIconBtnEl = document.getElementById("sessionPickerCloseIconBtn");
-    const sessionPickerLoadBtnEl = document.getElementById("sessionPickerLoadBtn");
-    const sessionPickerRenameBtnEl = document.getElementById("sessionPickerRenameBtn");
-    const sessionPickerDeleteBtnEl = document.getElementById("sessionPickerDeleteBtn");
-    const activePlayerCardEl = document.getElementById("activePlayerCard");
-    const playerStatsEl = document.getElementById("playerStats");
-    const rollBtnEl = document.getElementById("rollBtn");
-    const diceCubeEl = document.getElementById("diceCube");
-    const diceResultEl = document.getElementById("diceResult");
-    const addGoldBtnEl = document.getElementById("addGoldBtn");
-    const removeGoldBtnEl = document.getElementById("removeGoldBtn");
-    const giveBootsBtnEl = document.getElementById("giveBootsBtn");
-    const giveShieldBtnEl = document.getElementById("giveShieldBtn");
-    const punishBtnEl = document.getElementById("punishBtn");
-    const tileInfoEl = document.getElementById("tileInfo");
-    const moveToTileBtnEl = document.getElementById("moveToTileBtn");
-    const shopOverlayEl = document.getElementById("shopOverlay");
-    const tileContextMenuEl = document.getElementById("tileContextMenu");
-    const tileContextTitleEl = document.getElementById("tileContextTitle");
-    const tileContextSubtitleEl = document.getElementById("tileContextSubtitle");
-    const tileContextPlayerLabelEl = document.getElementById("tileContextPlayerLabel");
-    const closeShopBtnEl = document.getElementById("closeShopBtn");
-    const shopBuyerSelectEl = document.getElementById("shopBuyerSelect");
-    const shopContextSectionEl = document.getElementById("shopContextSection");
-    const shopItemsListEl = document.getElementById("shopItemsList");
-    const shopPlayerMetaEl = document.getElementById("shopPlayerMeta");
-    const shopPlayerInventoryEl = document.getElementById("shopPlayerInventory");
-    const fortuneContextSectionEl = document.getElementById("fortuneContextSection");
-    const fortuneTextEl = document.getElementById("fortuneText");
-    const fortunePlayerMetaEl = document.getElementById("fortunePlayerMeta");
-    const fortuneActionBtnEl = document.getElementById("fortuneActionBtn");
-    const blackMarketContextSectionEl = document.getElementById("blackMarketContextSection");
-    const blackMarketPlayerMetaEl = document.getElementById("blackMarketPlayerMeta");
-    const blackMarketActionBtnEl = document.getElementById("blackMarketActionBtn");
-    const altarContextSectionEl = document.getElementById("altarContextSection");
-    const altarPlayerMetaEl = document.getElementById("altarPlayerMeta");
-    const altarActionBtnEl = document.getElementById("altarActionBtn");
-    const inventoryOverlayEl = document.getElementById("inventoryOverlay");
-    const inventoryNameEl = document.getElementById("inventoryName");
-    const inventoryHpEl = document.getElementById("inventoryHp");
-    const inventoryGoldEl = document.getElementById("inventoryGold");
-    const inventoryBodyEl = document.getElementById("inventoryBody");
-    const closeInventoryBtnEl = document.getElementById("closeInventoryBtn");
-    const victoryOverlayEl = document.getElementById("victoryOverlay");
-    const victoryBodyEl = document.getElementById("victoryBody");
-    const closeVictoryBtnEl = document.getElementById("closeVictoryBtn");
-    const victoryNewGameBtnEl = document.getElementById("victoryNewGameBtn");
+    const boardEl = getEl('board');
+    const boardWrapEl = getEl('boardWrap');
+    const boardStaticLayerEl = getEl('boardStaticLayer');
+    const tokensLayerEl = getEl('tokensLayer');
+
+    const gameTitleEl = getEl('gameTitle');
+    const mainMenuEl = getEl('mainMenu');
+    const mainMenuContinueBtnEl = getEl('mainMenuContinueBtn');
+    const mainMenuSettingsBtnEl = getEl('mainMenuSettingsBtn');
+    const settingsLauncherEl = getEl('settingsLauncher');
+    const settingsPanelEl = getEl('settingsPanel');
+    const settingsCloseBtnEl = getEl('settingsCloseBtn');
+    const settingsGeneralTabBtnEl = getEl('settingsGeneralTabBtn');
+    const settingsConfigTabBtnEl = getEl('settingsConfigTabBtn');
+    const sidePanelToggleBtnEl = getEl('sidePanelToggleBtn');
+    const languageSelectEl = getEl('languageSelect');
+    const configBoardSizeEl = getEl('configBoardSize');
+    const configPlayerMaxHpEl = getEl('configPlayerMaxHp');
+    const configGoldPerMoveEl = getEl('configGoldPerMove');
+    const configInventorySlotsEl = getEl('configInventorySlots');
+    const configAutosaveDelayEl = getEl('configAutosaveDelay');
+    const configFinishersToEndGameEl = getEl('configFinishersToEndGame');
+    const configFortuneGoodChanceEl = getEl('configFortuneGoodChance');
+    const configBlackMarketProfitChanceEl = getEl('configBlackMarketProfitChance');
+    const configAltarShieldChanceEl = getEl('configAltarShieldChance');
+    const fortuneGoodChanceValueEl = getEl('fortuneGoodChanceValue');
+    const blackMarketProfitChanceValueEl = getEl('blackMarketProfitChanceValue');
+    const altarShieldChanceValueEl = getEl('altarShieldChanceValue');
+    const configLastCellPreviewEl = getEl('configLastCellPreview');
+    const configEditorStatusEl = getEl('configEditorStatus');
+    const saveConfigBtnEl = getEl('saveConfigBtn');
+    const resetConfigBtnEl = getEl('resetConfigBtn');
+    const toastContainerEl = getEl('toastContainer');
+    const eventJournalLauncherEl = getEl('eventJournalLauncher');
+    const eventJournalEl = getEl('eventJournal');
+    const copyLogsBtnEl = getEl('copyLogsBtn');
+    const logFilterSelectEl = getEl('logFilterSelect');
+    const logBoxEl = getEl('logBox');
+    const playerNameEl = getEl('playerName');
+    const addPlayerBtnEl = getEl('addPlayerBtn');
+    const playersListEl = getEl('playersList');
+    const activePlayerSelectEl = getEl('activePlayerSelect');
+    const turnInfoEl = getEl('turnInfo');
+    const turnListEl = getEl('turnList');
+    const nextTurnBtnEl = getEl('nextTurnBtn');
+    const undoBtnEl = getEl('undoBtn');
+    const saveGameBtnEl = getEl('saveGameBtn');
+    const loadGameBtnEl = getEl('loadGameBtn');
+    const newGameBtnEl = getEl('newGameBtn');
+    const newGameSetupEl = getEl('newGameSetup');
+    const newGameStartBtnEl = getEl('newGameStartBtn');
+    const newGameCloseBtnEl = getEl('newGameCloseBtn');
+    const newGameNameInputEl = getEl('newGameNameInput');
+    const savePlayersToggleEl = getEl('savePlayersToggle');
+    const installAppBtnEl = getEl('installAppBtn');
+    const tutorialBtnEl = getEl('tutorialBtn');
+    const sessionSelectEl = getEl('sessionSelect');
+    const sessionNewBtnEl = getEl('sessionNewBtn');
+    const sessionSaveBtnEl = getEl('sessionSaveBtn');
+    const sessionPickerEl = getEl('sessionPicker');
+    const sessionPickerSelectEl = getEl('sessionPickerSelect');
+    const sessionPickerCloseBtnEl = getEl('sessionPickerCloseBtn');
+    const sessionPickerCloseIconBtnEl = getEl('sessionPickerCloseIconBtn');
+    const sessionPickerLoadBtnEl = getEl('sessionPickerLoadBtn');
+    const sessionPickerRenameBtnEl = getEl('sessionPickerRenameBtn');
+    const sessionPickerDeleteBtnEl = getEl('sessionPickerDeleteBtn');
+    const activePlayerCardEl = getEl('activePlayerCard');
+    const playerStatsEl = getEl('playerStats');
+    const rollBtnEl = getEl('rollBtn');
+    const diceCubeEl = getEl('diceCube');
+    const diceResultEl = getEl('diceResult');
+    const addGoldBtnEl = getEl('addGoldBtn');
+    const removeGoldBtnEl = getEl('removeGoldBtn');
+    const giveBootsBtnEl = getEl('giveBootsBtn');
+    const giveShieldBtnEl = getEl('giveShieldBtn');
+    const punishBtnEl = getEl('punishBtn');
+    const tileInfoEl = getEl('tileInfo');
+    const moveToTileBtnEl = getEl('moveToTileBtn');
+    const shopOverlayEl = getEl('shopOverlay');
+    const tileContextMenuEl = getEl('tileContextMenu');
+    const tileContextTitleEl = getEl('tileContextTitle');
+    const tileContextSubtitleEl = getEl('tileContextSubtitle');
+    const tileContextPlayerLabelEl = getEl('tileContextPlayerLabel');
+    const closeShopBtnEl = getEl('closeShopBtn');
+    const shopBuyerSelectEl = getEl('shopBuyerSelect');
+    const shopContextSectionEl = getEl('shopContextSection');
+    const shopItemsListEl = getEl('shopItemsList');
+    const shopPlayerMetaEl = getEl('shopPlayerMeta');
+    const shopPlayerInventoryEl = getEl('shopPlayerInventory');
+    const fortuneContextSectionEl = getEl('fortuneContextSection');
+    const fortuneTextEl = getEl('fortuneText');
+    const fortunePlayerMetaEl = getEl('fortunePlayerMeta');
+    const fortuneActionBtnEl = getEl('fortuneActionBtn');
+    const blackMarketContextSectionEl = getEl('blackMarketContextSection');
+    const blackMarketPlayerMetaEl = getEl('blackMarketPlayerMeta');
+    const blackMarketActionBtnEl = getEl('blackMarketActionBtn');
+    const altarContextSectionEl = getEl('altarContextSection');
+    const altarPlayerMetaEl = getEl('altarPlayerMeta');
+    const altarActionBtnEl = getEl('altarActionBtn');
+    const inventoryOverlayEl = getEl('inventoryOverlay');
+    const inventoryNameEl = getEl('inventoryName');
+    const inventoryHpEl = getEl('inventoryHp');
+    const inventoryGoldEl = getEl('inventoryGold');
+    const inventoryBodyEl = getEl('inventoryBody');
+    const closeInventoryBtnEl = getEl('closeInventoryBtn');
+    const tradeOverlayEl = getEl('tradeOverlay');
+    const tradeBodyEl = getEl('tradeBody');
+    const closeTradeBtnEl = getEl('closeTradeBtn');
+    const victoryOverlayEl = getEl('victoryOverlay');
+    const victoryBodyEl = getEl('victoryBody');
+    const closeVictoryBtnEl = getEl('closeVictoryBtn');
+    const victoryNewGameBtnEl = getEl('victoryNewGameBtn');
     let autosaveTimer = null;
     let tileContextMode = "shop";
     let boardCellEls = [];
-    let cellCenters = [];
-    let cellCentersValid = false;
-    let lastRenderedSelectedCell = 0;
+let cellCenters = [];
+let cellCentersValid = false;
+let cellCentersRafId = null;
+let scaleVarsSignature = '';
+let scaleVarsValueSignature = '';
+let lastRenderedSelectedCell = 0;
+let perfSectionTimes = {};
     let lastContextMenuSignature = "";
     let tokenElsById = new Map();
     let lastActiveTokenId = "";
@@ -255,6 +292,8 @@ const state = {
     })();
     const perfStats = new Map();
     const dirtyPlayers = new Map();
+    const tradeTargetByPlayerId = new Map();
+    const tradeSelectionByPlayerId = new Map();
     const contextInit = {
       shop: false,
       fortuneTeller: false,
@@ -270,7 +309,7 @@ const state = {
     let diceRotationY = 45;
     let autosaveDirty = false;
     const DICE_ANIMATION_MS = 1100;
-    const DICE_ROTATIONS = {
+const DICE_ROTATIONS = {
       1: { x: 0, y: 0 },
       2: { x: -90, y: 0 },
       3: { x: 0, y: -90 },
@@ -279,7 +318,11 @@ const state = {
       6: { x: 0, y: 180 }
     };
 
+    let logFormatCache = new WeakMap();
+    let logCacheHits = 0;
+
     function reduceState(prev, action) {
+
       switch (action.type) {
         case "PATCH":
           return { ...prev, ...action.patch };
@@ -596,7 +639,7 @@ const state = {
         closeInventoryBtnEl,
         closeVictoryBtnEl,
       ].forEach((buttonEl) => {
-        if (buttonEl) buttonEl.textContent = "×";
+        if (buttonEl) buttonEl.textContent = "\u00D7";
       });
 
       document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
@@ -656,6 +699,10 @@ const state = {
       currentLanguage = nextLanguage;
       TEXTS = window.GAME_I18N.getBundle(nextLanguage);
       window.GAME_I18N.setLanguageKey(LANGUAGE_STORAGE_KEY, nextLanguage);
+
+      // Clear log format cache on language change
+      logFormatCache = new WeakMap();
+
       applyStaticTranslations();
       queueRender({ stats: true, players: true, selectedTile: true, refreshContextMenu: true, refreshInventoryOverlay: true, tokensFull: true });
     }
@@ -721,8 +768,33 @@ const state = {
         const avg = stat.total / stat.count;
         console.debug(`[perf] ${handle.name}: avg=${avg.toFixed(2)}ms max=${stat.max.toFixed(2)}ms n=${stat.count}`);
       }
+
+if (PERF_ENABLED && logCacheHits > 0 && logCacheHits % 100 === 0) {
+  console.debug(`[perf] logFormatCache: hits=${logCacheHits} (${((logCacheHits/(logCacheHits+100))*100).toFixed(1)}% hit rate)`);
+}
       performance.clearMarks(handle.startMark);
       performance.clearMarks(endMark);
+    }
+
+    function recordPerfSection(name, duration) {
+      if (!PERF_ENABLED) return;
+      const stat = perfSectionTimes[name] || { count: 0, total: 0, max: 0 };
+      stat.count += 1;
+      stat.total += duration;
+      stat.max = Math.max(stat.max, duration);
+      perfSectionTimes[name] = stat;
+      if (stat.count % 60 === 0) {
+        const avg = stat.total / stat.count;
+        console.debug(`[perf] section ${name}: avg=${avg.toFixed(2)}ms max=${stat.max.toFixed(2)}ms n=${stat.count}`);
+      }
+    }
+
+    function measurePerfSection(name, fn) {
+      if (!PERF_ENABLED) return fn();
+      const started = performance.now();
+      const result = fn();
+      recordPerfSection(name, performance.now() - started);
+      return result;
     }
 
     function requestIdle(callback) {
@@ -790,21 +862,25 @@ const state = {
       return "player";
     }
 
-    function formatLogEntry(entry) {
-      const safeAt = Number.isFinite(Number(entry?.at)) ? Number(entry.at) : Date.now();
-      const safeText = String(entry?.text || "").trim();
-      if (!safeText) return "";
-      const cache = entry._formatted || null;
-      if (cache && cache.lang === currentLanguage && cache.at === safeAt && cache.text === safeText) {
-        return cache.value;
-      }
-      const locale = currentLanguage === "en" ? "en-US" : currentLanguage === "uk" ? "uk-UA" : "ru-RU";
-      const time = new Date(safeAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      const localizedText = window.GAME_I18N.translateLogMessage(safeText, currentLanguage);
-      const value = `[${time}] ${localizedText}`;
-      entry._formatted = { lang: currentLanguage, at: safeAt, text: safeText, value };
-      return value;
-    }
+function formatLogEntry(entry) {
+  const cached = logFormatCache.get(entry);
+  if (cached !== undefined) {
+    if (PERF_ENABLED) logCacheHits++;
+    return cached;
+  }
+
+  const safeAt = Number.isFinite(Number(entry?.at)) ? Number(entry.at) : Date.now();
+  const safeText = String(entry?.text || "").trim();
+  if (!safeText) return "";
+
+  const locale = currentLanguage === "en" ? "en-US" : currentLanguage === "uk" ? "uk-UA" : "ru-RU";
+  const time = new Date(safeAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const localizedText = window.GAME_I18N.translateLogMessage(safeText, currentLanguage);
+  const value = `[${time}] ${localizedText}`;
+
+  logFormatCache.set(entry, value);
+  return value;
+}
 
     function trimLogEntries() {
       if (state.logEntries.length <= MAX_LOG_ENTRIES) return;
@@ -913,9 +989,10 @@ const state = {
     function syncLogLauncherState() {
       if (!eventJournalLauncherEl) return;
       const isOpen = !eventJournalEl.classList.contains("is-hidden");
-      eventJournalLauncherEl.textContent = isOpen ? "−" : "≡";
-      eventJournalLauncherEl.setAttribute("aria-label", isOpen ? "Свернуть логи" : "Логи");
-      eventJournalLauncherEl.setAttribute("title", isOpen ? "Свернуть логи" : "Логи");
+      eventJournalLauncherEl.textContent = isOpen ? "\u2212" : "\u2261";
+      const launcherLabel = isOpen ? t("eventJournal.collapse") : t("eventJournal.expand");
+      eventJournalLauncherEl.setAttribute("aria-label", launcherLabel);
+      eventJournalLauncherEl.setAttribute("title", launcherLabel);
       eventJournalLauncherEl.setAttribute("aria-expanded", isOpen ? "true" : "false");
     }
 
@@ -1085,7 +1162,7 @@ const state = {
       const updated = String(session?.updatedAt || "").trim();
       if (!updated) return name;
       const date = new Date(updated);
-      if (isNaN(date.getTime())) return `${name} • ${updated}`;
+      if (isNaN(date.getTime())) return `${name} \u2022 ${updated}`;
       const locale = currentLanguage === "en" ? "en-US" : (currentLanguage === "uk" ? "uk-UA" : "ru-RU");
       const formattedDate = date.toLocaleString(locale, {
         day: "2-digit",
@@ -1094,7 +1171,7 @@ const state = {
         hour: "2-digit",
         minute: "2-digit"
       });
-      return `${name} • ${formattedDate}`;
+      return `${name} \u2022 ${formattedDate}`;
     }
 
     function syncSessionSelect() {
@@ -1108,7 +1185,7 @@ const state = {
         option.textContent = getSessionLabel(session);
         if (session.finished) {
           option.className = "session-finished";
-          option.textContent = "✓ " + option.textContent;
+          option.textContent = "РІСљвЂњ " + option.textContent;
         }
         sessionSelectEl.appendChild(option);
       });
@@ -1127,7 +1204,7 @@ const state = {
         option.textContent = getSessionLabel(session);
         if (session.finished) {
           option.className = "session-finished";
-          option.textContent = "✓ " + option.textContent;
+          option.textContent = "РІСљвЂњ " + option.textContent;
         }
         sessionPickerSelectEl.appendChild(option);
       });
@@ -1295,7 +1372,7 @@ const state = {
       const candidates = sessions.filter((s) => hasSessionSave(s.id));
       if (candidates.length === 0) return "";
 
-      // Сортируем сессии по времени последнего обновления (updatedAt) в порядке убывания
+      // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (updatedAt) пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
       candidates.sort((a, b) => {
         const timeA = new Date(a.updatedAt || 0).getTime();
         const timeB = new Date(b.updatedAt || 0).getTime();
@@ -1495,9 +1572,11 @@ const state = {
       }
 
       if (flags.players) {
-        renderPlayerSelect();
-        renderPlayersMenu();
-        renderTurnManager();
+        measurePerfSection("players", () => {
+          renderPlayerSelect();
+          renderPlayersMenu();
+          renderTurnManager();
+        });
         flags.players = false;
         if (shouldYield()) {
           requeueRemaining(flags, tokenPositions, tokenActiveIds, shouldAutosave);
@@ -1506,7 +1585,9 @@ const state = {
         }
       }
       if (flags.stats) {
-        renderStats();
+        measurePerfSection("stats", () => {
+          renderStats();
+        });
         flags.stats = false;
         if (shouldYield()) {
           requeueRemaining(flags, tokenPositions, tokenActiveIds, shouldAutosave);
@@ -1515,7 +1596,9 @@ const state = {
         }
       }
       if (flags.selectedTile) {
-        renderSelectedTile();
+        measurePerfSection("selectedTile", () => {
+          renderSelectedTile();
+        });
         flags.selectedTile = false;
         if (shouldYield()) {
           requeueRemaining(flags, tokenPositions, tokenActiveIds, shouldAutosave);
@@ -1524,7 +1607,9 @@ const state = {
         }
       }
       if (flags.refreshInventoryOverlay && inventoryOverlayEl.classList.contains("visible")) {
-        renderInventoryOverlay();
+        measurePerfSection("inventory", () => {
+          renderInventoryOverlay();
+        });
         flags.refreshInventoryOverlay = false;
         if (shouldYield()) {
           requeueRemaining(flags, tokenPositions, tokenActiveIds, shouldAutosave);
@@ -1533,7 +1618,9 @@ const state = {
         }
       }
       if (flags.refreshContextMenu) {
-        refreshCurrentContextMenu();
+        measurePerfSection("contextMenu", () => {
+          refreshCurrentContextMenu();
+        });
         flags.refreshContextMenu = false;
         if (shouldYield()) {
           requeueRemaining(flags, tokenPositions, tokenActiveIds, shouldAutosave);
@@ -1542,12 +1629,16 @@ const state = {
         }
       }
       if (flags.tokensFull) {
-        renderTokens({ forceFull: true });
+        measurePerfSection("tokens", () => {
+          renderTokens({ forceFull: true });
+        });
         tokenRenderDone = true;
       } else if (tokenPositions.size > 0 || tokenActiveIds.size > 0) {
-        renderTokens({
-          positions: Array.from(tokenPositions),
-          activeIds: Array.from(tokenActiveIds)
+        measurePerfSection("tokens", () => {
+          renderTokens({
+            positions: Array.from(tokenPositions),
+            activeIds: Array.from(tokenActiveIds)
+          });
         });
         tokenRenderDone = true;
       }
@@ -1558,7 +1649,9 @@ const state = {
         return;
       }
       if (shouldAutosave) {
-        scheduleAutoSave();
+        measurePerfSection("autosave", () => {
+          scheduleAutoSave();
+        });
       }
       endPerf(perf);
     }
@@ -1592,39 +1685,69 @@ const state = {
       return Math.max(min, Math.min(max, value));
     }
 
-    function syncBoardScaleVars() {
-      if (!boardWrapEl || !boardEl) return;
-      const boardSize = Math.max(1, Number(BOARD_SIZE) || 10);
-      boardWrapEl.style.setProperty("--board-size", String(boardSize));
+function syncBoardScaleVars() {
+  if (!boardWrapEl || !boardEl) return;
+  const boardSize = Math.max(1, Number(BOARD_SIZE) || 10);
 
-      const rect = boardEl.getBoundingClientRect();
-      const boardPx = Math.max(1, Math.min(rect.width || 0, rect.height || 0) || 0);
-      if (!Number.isFinite(boardPx) || boardPx <= 1) return;
+  const rect = boardEl.getBoundingClientRect();
+  const boardPx = Math.max(1, Math.min(rect.width || 0, rect.height || 0) || 0);
+  if (!Number.isFinite(boardPx) || boardPx <= 1) return;
 
-      const cellPx = boardPx / boardSize;
+  const cellPx = boardPx / boardSize;
 
-      const cellPad = Math.round(clamp(cellPx * 0.10, 1, 4));
-      const cellInset = Math.round(clamp(cellPx * 0.12, 1, 4));
-      const cellRadius = Math.round(clamp(cellPx * 0.22, 3, 8));
-      const cellNumFont = Math.round(clamp(cellPx * 0.33, 8, 14));
-      const cellIconFont = Math.round(clamp(cellPx * 0.42, 9, 16));
-      const cellRuneFont = Math.round(clamp(cellPx * 0.48, 10, 18));
-      const cellIconRight = Math.round(clamp(cellPx * 0.12, 1, 5));
-      const cellIconBottom = Math.round(clamp(cellPx * 0.10, 1, 4));
-      const tokenSize = Math.round(clamp(cellPx * 0.62, 14, 26));
-      const tokenFont = Math.round(clamp(cellPx * 0.32, 9, 14));
+  const cellPad = Math.round(clamp(cellPx * 0.10, 1, 4));
+  const cellInset = Math.round(clamp(cellPx * 0.12, 1, 4));
+  const cellRadius = Math.round(clamp(cellPx * 0.22, 3, 8));
+  const cellNumFont = Math.round(clamp(cellPx * 0.33, 8, 14));
+  const cellIconFont = Math.round(clamp(cellPx * 0.42, 9, 16));
+  const cellRuneFont = Math.round(clamp(cellPx * 0.48, 10, 18));
+  const cellIconRight = Math.round(clamp(cellPx * 0.12, 1, 5));
+  const cellIconBottom = Math.round(clamp(cellPx * 0.10, 1, 4));
+  const tokenSize = Math.round(clamp(cellPx * 0.62, 14, 26));
+  const tokenFont = Math.round(clamp(cellPx * 0.32, 9, 14));
+  const nextSignature = [
+    boardSize,
+    cellPad,
+    cellInset,
+    cellRadius,
+    cellNumFont,
+    cellIconFont,
+    cellRuneFont,
+    cellIconRight,
+    cellIconBottom,
+    tokenSize,
+    tokenFont
+  ].join("|");
+  if (nextSignature === scaleVarsValueSignature) return;
+  scaleVarsValueSignature = nextSignature;
 
-      boardWrapEl.style.setProperty("--cell-pad", `${cellPad}px`);
-      boardWrapEl.style.setProperty("--cell-inset", `${cellInset}px`);
-      boardWrapEl.style.setProperty("--cell-radius", `${cellRadius}px`);
-      boardWrapEl.style.setProperty("--cell-num-font", `${cellNumFont}px`);
-      boardWrapEl.style.setProperty("--cell-icon-font", `${cellIconFont}px`);
-      boardWrapEl.style.setProperty("--cell-rune-font", `${cellRuneFont}px`);
-      boardWrapEl.style.setProperty("--cell-icon-right", `${cellIconRight}px`);
-      boardWrapEl.style.setProperty("--cell-icon-bottom", `${cellIconBottom}px`);
-      boardWrapEl.style.setProperty("--token-size", `${tokenSize}px`);
-      boardWrapEl.style.setProperty("--token-font", `${tokenFont}px`);
-    }
+  boardWrapEl.style.setProperty("--board-size", String(boardSize));
+  boardWrapEl.style.setProperty("--cell-pad", `${cellPad}px`);
+  boardWrapEl.style.setProperty("--cell-inset", `${cellInset}px`);
+  boardWrapEl.style.setProperty("--cell-radius", `${cellRadius}px`);
+  boardWrapEl.style.setProperty("--cell-num-font", `${cellNumFont}px`);
+  boardWrapEl.style.setProperty("--cell-icon-font", `${cellIconFont}px`);
+  boardWrapEl.style.setProperty("--cell-rune-font", `${cellRuneFont}px`);
+  boardWrapEl.style.setProperty("--cell-icon-right", `${cellIconRight}px`);
+  boardWrapEl.style.setProperty("--cell-icon-bottom", `${cellIconBottom}px`);
+  boardWrapEl.style.setProperty("--token-size", `${tokenSize}px`);
+  boardWrapEl.style.setProperty("--token-font", `${tokenFont}px`);
+}
+
+function rafDebounceSyncScale() {
+  if (cellCentersRafId) return;
+  cellCentersRafId = requestAnimationFrame(() => {
+    cellCentersRafId = null;
+    const rect = boardWrapEl.getBoundingClientRect();
+    const newSig = `${rect.width.toFixed(0)}|${rect.height.toFixed(0)}|${BOARD_SIZE}`;
+    if (newSig === scaleVarsSignature) return;
+    scaleVarsSignature = newSig;
+    const perfScale = beginPerf('scaleVars');
+    syncBoardScaleVars();
+    invalidateCellCenterCache();
+    endPerf(perfScale);
+  });
+}
 
     function normalizePlayerHp(playerLike) {
       const maxHpRaw = Number(playerLike?.maxHp);
@@ -1768,6 +1891,7 @@ const state = {
     }
 
     function renderShopMenuItems(mode = "shop") {
+      const fragment = document.createDocumentFragment();
       shopItemsListEl.innerHTML = "";
       const isShadowMarket = mode === "blackMarket";
       const blackMarketOnly = new Set(["adrenaline", "trapKit"]);
@@ -1783,8 +1907,9 @@ const state = {
           <span class="slot-price">${formatGold(item.price)}</span>
           <div class="item-tooltip"><b>${itemName}</b><br>${itemDesc}</div>
         `;
-        shopItemsListEl.appendChild(slot);
+        fragment.appendChild(slot);
       });
+      shopItemsListEl.appendChild(fragment);
       contextInit.shop = true;
       lastShopMenuMode = mode;
     }
@@ -1916,6 +2041,375 @@ const state = {
       const current = byId[itemId] ?? 0;
       if (current > 0) return true;
       return getOccupiedInventorySlots(player) < INVENTORY_SLOT_LIMIT;
+    }
+
+    function isAdjacentCell(a, b) {
+      return Math.abs(Number(a) - Number(b)) === 1;
+    }
+
+    function isSameCell(a, b) {
+      return Number(a) === Number(b);
+    }
+
+    function getAvatarHueSeed(player) {
+      const seed = String(player?.id || player?.name || "");
+      let hash = 0;
+      for (let i = 0; i < seed.length; i += 1) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash) % 360;
+    }
+
+    function getAdjacentPlayersFor(player) {
+      if (!player) return [];
+      return state.players.filter((entry) => entry.id !== player.id && isSameCell(entry.position, player.position));
+    }
+
+    function getTradeSelectionState(playerId) {
+      const key = String(playerId || "");
+      let stateEntry = tradeSelectionByPlayerId.get(key) || null;
+      if (!stateEntry) {
+        stateEntry = { giveItems: [], getItems: [] };
+        tradeSelectionByPlayerId.set(key, stateEntry);
+      }
+      if (!Array.isArray(stateEntry.giveItems)) stateEntry.giveItems = [];
+      if (!Array.isArray(stateEntry.getItems)) stateEntry.getItems = [];
+      return stateEntry;
+    }
+
+    function getTradeItemDefs(player) {
+      const defs = [
+        { prop: "boots", addKey: "boots", shopId: "boots" },
+        { prop: "shields", addKey: "shield", shopId: "shield" },
+        { prop: "luckCharm", addKey: "luckCharm", shopId: "luckCharm" },
+        { prop: "adrenaline", addKey: "adrenaline", shopId: "adrenaline" },
+        { prop: "trapKit", addKey: "trapKit", shopId: "trapKit" },
+        { prop: "rerollStone", addKey: "rerollStone", shopId: "rerollStone" },
+        { prop: "alchemyCrystal", addKey: "alchemyCrystal", shopId: "alchemyCrystal" }
+      ];
+      return defs
+        .filter((item) => Math.max(0, Number(player[item.prop]) || 0) > 0)
+        .map((item) => {
+          const shopItem = SHOP_ITEMS.find((entry) => entry.id === item.shopId);
+          return {
+            prop: item.prop,
+            addKey: item.addKey,
+            count: Math.max(0, Number(player[item.prop]) || 0),
+            name: shopItem ? getShopItemName(shopItem) : item.prop,
+            icon: SHOP_ITEM_META[item.shopId]?.icon || iconUnknown(),
+            desc: shopItem ? getShopItemDesc(shopItem) : item.prop
+          };
+        });
+    }
+
+    function getTradeTransferDef(itemProp) {
+      const transferDefs = {
+        boots: { addKey: "boots", shopId: "boots" },
+        shields: { addKey: "shield", shopId: "shield" },
+        luckCharm: { addKey: "luckCharm", shopId: "luckCharm" },
+        adrenaline: { addKey: "adrenaline", shopId: "adrenaline" },
+        trapKit: { addKey: "trapKit", shopId: "trapKit" },
+        rerollStone: { addKey: "rerollStone", shopId: "rerollStone" },
+        alchemyCrystal: { addKey: "alchemyCrystal", shopId: "alchemyCrystal" }
+      };
+      return transferDefs[itemProp] || null;
+    }
+
+    function buildTradeInventoryCounts(player) {
+      return {
+        boots: Number(player.boots) || 0,
+        shields: Number(player.shields) || 0,
+        luckCharm: Number(player.luckCharm) || 0,
+        adrenaline: Number(player.adrenaline) || 0,
+        trapKit: Number(player.trapKit) || 0,
+        rerollStone: Number(player.rerollStone) || 0,
+        alchemyCrystal: Number(player.alchemyCrystal) || 0
+      };
+    }
+
+    function canResolveTradeInventory(player, giveItems, getItems) {
+      const nextCounts = buildTradeInventoryCounts(player);
+      const giveUnique = [...new Set((Array.isArray(giveItems) ? giveItems : []).filter(Boolean))];
+      const getUnique = [...new Set((Array.isArray(getItems) ? getItems : []).filter(Boolean))];
+
+      giveUnique.forEach((prop) => {
+        nextCounts[prop] = (nextCounts[prop] || 0) - 1;
+      });
+      getUnique.forEach((prop) => {
+        nextCounts[prop] = (nextCounts[prop] || 0) + 1;
+      });
+
+      const hasNegative = Object.values(nextCounts).some((count) => count < 0);
+      if (hasNegative) return false;
+
+      const occupied = Object.values(nextCounts).reduce((acc, count) => acc + (count > 0 ? 1 : 0), 0);
+      return occupied <= INVENTORY_SLOT_LIMIT;
+    }
+
+    function buildTradeInventoryHtml(items, selectedProps, role) {
+      const selectedSet = new Set(Array.isArray(selectedProps) ? selectedProps : []);
+      const slots = Array.from({ length: INVENTORY_SLOT_LIMIT }, (_, index) => items[index] || null);
+      return slots.map((item) => {
+        if (!item) return `<div class="inv-slot trade-inv-slot empty">+</div>`;
+        const isSelected = selectedSet.has(item.prop);
+        return `
+          <div class="inv-slot occupied trade-inv-slot${isSelected ? " selected" : ""}" data-trade-select="${role}" data-trade-item="${item.prop}" data-trade-selected="${isSelected ? "true" : "false"}">
+            <span class="item-icon">${item.icon}</span>
+            <span class="slot-count">x${item.count}</span>
+            <div class="item-tooltip"><b>${item.name}</b><br>${item.desc}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTradePanelHtml(player) {
+      const neighbors = getAdjacentPlayersFor(player);
+      if (neighbors.length === 0) {
+        return `
+          <div class="trade-panel">
+            <div class="effect-desc">${t("ui.tradePanelNoDeal")}</div>
+          </div>
+        `;
+      }
+
+      const currentStored = String(tradeTargetByPlayerId.get(player.id) || "");
+      const selectedId = neighbors.some((entry) => entry.id === currentStored) ? currentStored : neighbors[0].id;
+      tradeTargetByPlayerId.set(player.id, selectedId);
+      const selectedTarget = neighbors.find((entry) => entry.id === selectedId) || neighbors[0];
+      const items = getTradeItemDefs(player);
+      const targetItems = getTradeItemDefs(selectedTarget);
+      const goldMax = Math.max(0, Number(player.gold) || 0);
+      const targetGoldMax = Math.max(0, Number(selectedTarget.gold) || 0);
+      const tradeSelection = getTradeSelectionState(player.id);
+      const neighborsOptions = neighbors.map((entry) => {
+        const selected = entry.id === selectedId ? "selected" : "";
+        return `<option value="${entry.id}" ${selected}>${entry.name} (tile ${entry.position})</option>`;
+      }).join("");
+      const targetControlHtml = neighbors.length > 1
+        ? `<select id="tradeTargetSelect" data-trade-target-select="true">${neighborsOptions}</select>`
+        : ``;
+
+      tradeSelection.giveItems = tradeSelection.giveItems.filter((prop) => items.some((item) => item.prop === prop));
+      tradeSelection.getItems = tradeSelection.getItems.filter((prop) => targetItems.some((item) => item.prop === prop));
+      const giveInventoryHtml = buildTradeInventoryHtml(items, tradeSelection.giveItems, "give");
+      const getInventoryHtml = buildTradeInventoryHtml(targetItems, tradeSelection.getItems, "get");
+
+      return `
+          <div class="contract-card trade-panel" data-trade-owner-id="${player.id}" data-trade-target-id="${selectedTarget.id}">
+            <div class="trade-seal" data-trade-seal="true">${t("ui.tradeSeal")}</div>
+            <div class="header">
+              <h2>${t("ui.tradeContractTitle")}</h2>
+            </div>
+            <div class="footer">
+              ${targetControlHtml}
+            </div>
+            <div class="trade-zones">
+              <div class="zone">
+                <h3>${t("ui.tradePlayerGives", { name: player.name })}</h3>
+                <div class="trade-player-gold">${formatGold(player.gold)}</div>
+                <div class="item-slot trade-item-slot">
+                  <div class="trade-inventory-slots">${giveInventoryHtml}</div>
+                </div>
+                <div class="gold-row">
+                  <span class="gold-mark">\uD83D\uDCB0</span>
+                  <input type="number" class="gold-input" min="0" max="${goldMax}" value="0" data-trade-give-gold="true" ${goldMax < 1 ? "disabled" : ""}>
+                </div>
+              </div>
+              <div class="divider">\u21C4</div>
+              <div class="zone">
+                <h3>${t("ui.tradePlayerGives", { name: selectedTarget.name })}</h3>
+                <div class="trade-player-gold">${formatGold(selectedTarget.gold)}</div>
+                <div class="item-slot trade-item-slot">
+                  <div class="trade-inventory-slots">${getInventoryHtml}</div>
+                </div>
+                <div class="gold-row">
+                  <span class="gold-mark">\uD83D\uDCB0</span>
+                  <input type="number" class="gold-input" min="0" max="${targetGoldMax}" value="0" data-trade-get-gold="true" ${targetGoldMax < 1 ? "disabled" : ""}>
+                </div>
+              </div>
+            </div>
+            <div class="footer">
+              <button class="btn-sign" data-trade-submit="true">${t("ui.tradeSealBtn")}</button>
+            </div>
+          </div>
+      `;
+    }
+
+    function getTradeDraftFromDom(rootEl) {
+      if (!rootEl) return null;
+      const tradePanelEl = rootEl.querySelector("[data-trade-owner-id]");
+      const targetSelect = rootEl.querySelector("[data-trade-target-select]");
+      const giveGoldEl = rootEl.querySelector("[data-trade-give-gold]");
+      const getGoldEl = rootEl.querySelector("[data-trade-get-gold]");
+      return {
+        targetId: String(targetSelect?.value || tradePanelEl?.dataset.tradeTargetId || ""),
+        giveItems: Array.from(rootEl.querySelectorAll('[data-trade-select="give"][data-trade-selected="true"]'))
+          .map((el) => String(el.dataset.tradeItem || ""))
+          .filter(Boolean)
+          .sort(),
+        getItems: Array.from(rootEl.querySelectorAll('[data-trade-select="get"][data-trade-selected="true"]'))
+          .map((el) => String(el.dataset.tradeItem || ""))
+          .filter(Boolean)
+          .sort(),
+        giveGold: Math.max(0, Math.trunc(Number(giveGoldEl?.value || 0))),
+        getGold: Math.max(0, Math.trunc(Number(getGoldEl?.value || 0)))
+      };
+    }
+
+    function isTradeDraftIdentical(draft) {
+      if (!draft) return true;
+      return draft.giveGold === draft.getGold
+        && draft.giveItems.length === draft.getItems.length
+        && draft.giveItems.every((item, index) => item === draft.getItems[index]);
+    }
+
+    function isTradeDraftEmpty(draft) {
+      if (!draft) return true;
+      return draft.giveGold < 1
+        && draft.getGold < 1
+        && draft.giveItems.length === 0
+        && draft.getItems.length === 0;
+    }
+
+    function syncTradeSubmitState() {
+      if (!tradeBodyEl) return;
+      const submitBtn = tradeBodyEl.querySelector("[data-trade-submit]");
+      if (!submitBtn) return;
+      const draft = getTradeDraftFromDom(tradeBodyEl);
+      const disabled = !draft?.targetId || isTradeDraftEmpty(draft) || isTradeDraftIdentical(draft);
+      submitBtn.disabled = disabled;
+      if (isTradeDraftEmpty(draft)) {
+        submitBtn.title = t("ui.tradeSubmitNeedOffer");
+      } else if (isTradeDraftIdentical(draft)) {
+        submitBtn.title = t("ui.tradeSubmitSameOffer");
+      } else {
+        submitBtn.removeAttribute("title");
+      }
+    }
+
+    function applyUnifiedTrade(owner, target, deal) {
+      if (!owner || !target || !deal) return false;
+      if (!isSameCell(owner.position, target.position)) {
+        logEvent(`Trade denied: ${owner.name} and ${target.name} must be on the same tile.`);
+        return false;
+      }
+
+      const giveGold = Math.max(0, Math.trunc(Number(deal.giveGold) || 0));
+      const getGold = Math.max(0, Math.trunc(Number(deal.getGold) || 0));
+      const giveItems = [...new Set((Array.isArray(deal.giveItems) ? deal.giveItems : []).map((item) => String(item || "")).filter(Boolean))];
+      const getItems = [...new Set((Array.isArray(deal.getItems) ? deal.getItems : []).map((item) => String(item || "")).filter(Boolean))];
+      if (!giveItems.length && !getItems.length && giveGold < 1 && getGold < 1) return false;
+      if (!canResolveTradeInventory(owner, giveItems, getItems)) return false;
+      if (!canResolveTradeInventory(target, getItems, giveItems)) return false;
+      if (owner.gold < giveGold) return false;
+      if (target.gold < getGold) return false;
+
+      pushHistory(`Trade deal: ${owner.name} <-> ${target.name}`);
+      giveItems.forEach((itemProp) => {
+        owner[itemProp] -= 1;
+        target[itemProp] += 1;
+      });
+      getItems.forEach((itemProp) => {
+        target[itemProp] -= 1;
+        owner[itemProp] += 1;
+      });
+      if (giveGold > 0) {
+        owner.gold -= giveGold;
+        target.gold += giveGold;
+      }
+      if (getGold > 0) {
+        target.gold -= getGold;
+        owner.gold += getGold;
+      }
+
+      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(target.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      const giveGoldLabel = giveGold > 0 ? ` + ${formatGold(giveGold)}` : "";
+      const getGoldLabel = getGold > 0 ? ` + ${formatGold(getGold)}` : "";
+      const giveItemsLabel = giveItems.length ? giveItems.join(", ") : (giveGold > 0 ? "gold" : "nothing");
+      const getItemsLabel = getItems.length ? getItems.join(", ") : (getGold > 0 ? "gold" : "nothing");
+      logEvent(`Trade: ${owner.name} gives ${giveItemsLabel}${giveGoldLabel}, gets ${getItemsLabel}${getGoldLabel}.`);
+      queueRenderFromDirty({ autosave: true, tokenActiveIds: [owner.id, target.id] });
+      return true;
+    }
+    function applyGoldTrade(fromPlayer, toPlayer, amountRaw) {
+      const amount = Math.max(1, Math.trunc(Number(amountRaw) || 0));
+      if (!amount) return;
+      if (!isSameCell(fromPlayer.position, toPlayer.position)) {
+        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: ${fromPlayer.name} Рё ${toPlayer.name} РґРѕР»Р¶РЅС‹ СЃС‚РѕСЏС‚СЊ РЅР° РѕРґРЅРѕР№ РєР»РµС‚РєРµ.`);
+        return;
+      }
+      if ((fromPlayer.gold || 0) < amount) {
+        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${fromPlayer.name} РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ Р·РѕР»РѕС‚Р°.`);
+        return;
+      }
+      pushHistory(`Trade gold: ${fromPlayer.name} -> ${toPlayer.name}`);
+      fromPlayer.gold -= amount;
+      toPlayer.gold += amount;
+      markPlayerDirty(fromPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(toPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      logEvent(`РўРѕСЂРіРѕРІР»СЏ: ${fromPlayer.name} РїРµСЂРµРґР°С‘С‚ ${toPlayer.name} ${formatGold(amount)}.`);
+      queueRenderFromDirty({ autosave: true, tokenActiveIds: [fromPlayer.id, toPlayer.id] });
+    }
+
+    function applyItemTrade(fromPlayer, toPlayer, itemProp) {
+      const def = getTradeTransferDef(itemProp);
+      if (!def) return;
+      if (!isSameCell(fromPlayer.position, toPlayer.position)) {
+        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: ${fromPlayer.name} Рё ${toPlayer.name} РґРѕР»Р¶РЅС‹ СЃС‚РѕСЏС‚СЊ РЅР° РѕРґРЅРѕР№ РєР»РµС‚РєРµ.`);
+        return;
+      }
+      if ((fromPlayer[itemProp] || 0) < 1) {
+        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${fromPlayer.name} РЅРµС‚ РЅСѓР¶РЅРѕРіРѕ РїСЂРµРґРјРµС‚Р°.`);
+        return;
+      }
+      if (!canAddItemType(toPlayer, def.addKey)) {
+        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${toPlayer.name} РЅРµС‚ СЃРІРѕР±РѕРґРЅРѕРіРѕ СЃР»РѕС‚Р° РґР»СЏ РЅРѕРІРѕРіРѕ С‚РёРїР° РїСЂРµРґРјРµС‚Р°.`);
+        return;
+      }
+      const shopItem = SHOP_ITEMS.find((entry) => entry.id === def.shopId);
+      const itemLabel = shopItem ? getShopItemName(shopItem) : itemProp;
+      pushHistory(`Trade item: ${fromPlayer.name} -> ${toPlayer.name}`);
+      fromPlayer[itemProp] -= 1;
+      toPlayer[itemProp] += 1;
+      markPlayerDirty(fromPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(toPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      logEvent(`РўРѕСЂРіРѕРІР»СЏ: ${fromPlayer.name} РїРµСЂРµРґР°С‘С‚ ${toPlayer.name} РїСЂРµРґРјРµС‚ "${itemLabel}".`);
+      queueRenderFromDirty({ autosave: true, tokenActiveIds: [fromPlayer.id, toPlayer.id] });
+    }
+
+    function applyGoldForItemTrade(buyer, seller, itemProp, priceRaw) {
+      const def = getTradeTransferDef(itemProp);
+      if (!def) return;
+      const price = Math.max(1, Math.trunc(Number(priceRaw) || 0));
+      if (!isSameCell(buyer.position, seller.position)) {
+        logEvent(`Trade denied: ${buyer.name} and ${seller.name} must be on the same tile.`);
+        return;
+      }
+      if ((buyer.gold || 0) < price) {
+        logEvent(`Trade denied: ${buyer.name} does not have enough gold.`);
+        return;
+      }
+      if ((seller[itemProp] || 0) < 1) {
+        logEvent(`Trade denied: ${seller.name} does not have the selected item.`);
+        return;
+      }
+      if (!canAddItemType(buyer, def.addKey)) {
+        logEvent(`Trade denied: ${buyer.name} has no free inventory slot for a new item type.`);
+        return;
+      }
+      const shopItem = SHOP_ITEMS.find((entry) => entry.id === def.shopId);
+      const itemLabel = shopItem ? getShopItemName(shopItem) : itemProp;
+      pushHistory(`Trade deal: ${buyer.name} buys ${itemLabel} from ${seller.name}`);
+      buyer.gold -= price;
+      seller.gold += price;
+      seller[itemProp] -= 1;
+      buyer[itemProp] += 1;
+      markPlayerDirty(buyer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(seller.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      logEvent(`Trade deal: ${buyer.name} pays ${formatGold(price)} to ${seller.name} for "${itemLabel}".`);
+      queueRenderFromDirty({ autosave: true, tokenActiveIds: [buyer.id, seller.id] });
     }
 
     function renderShopPlayerInventory() {
@@ -2649,14 +3143,14 @@ const state = {
       return `linear-gradient(135deg, ${palette.join(", ")})`;
     }
 
-    function createBoard() {
-      syncBoardScaleVars();
-      boardEl.innerHTML = "";
-      boardCellEls = new Array(LAST_CELL + 1);
-      cellCenters = new Array(LAST_CELL + 1);
-      cellCentersValid = false;
-      lastRenderedSelectedCell = 0;
-      const fragment = document.createDocumentFragment();
+function createBoard() {
+  rafDebounceSyncScale();
+  boardEl.innerHTML = "";
+  boardCellEls = new Array(LAST_CELL + 1);
+  cellCenters = new Array(LAST_CELL + 1);
+  cellCentersValid = false;
+  lastRenderedSelectedCell = 0;
+  const fragment = document.createDocumentFragment();
       for (const cell of state.cells) {
         const { row, col } = cellNumberToCoord(cell.number);
         const types = getCellTypes(cell.number);
@@ -2911,7 +3405,7 @@ const state = {
     }
 
     function getCellTypeIcon(type) {
-      return (CELL_TYPE_META[type] || CELL_TYPE_META.normal || {}).icon || "•";
+      return (CELL_TYPE_META[type] || CELL_TYPE_META.normal || {}).icon || "вЂў";
     }
 
     function selectedPlayer() {
@@ -3044,6 +3538,28 @@ const state = {
 
     function closeVictoryOverlay() {
       victoryOverlayEl.classList.remove("visible");
+    }
+
+    function renderTradeOverlay() {
+      if (!tradeBodyEl) return;
+      const player = selectedPlayer();
+      if (!player) {
+        tradeBodyEl.innerHTML = `<div class="effect-desc">${t("ui.tradeSelectPlayerPrompt")}</div>`;
+        return;
+      }
+      tradeBodyEl.innerHTML = renderTradePanelHtml(player);
+      syncTradeSubmitState();
+    }
+
+    function closeTradeOverlay() {
+      if (!tradeOverlayEl) return;
+      tradeOverlayEl.classList.remove("visible");
+    }
+
+    function openTradeOverlay() {
+      if (!tradeOverlayEl) return;
+      renderTradeOverlay();
+      tradeOverlayEl.classList.add("visible");
     }
 
     function renderVictoryOverlay() {
@@ -3224,60 +3740,71 @@ const state = {
     }
 
     function renderPlayersMenu() {
-      if (state.players.length === 0) {
-        playersListEl.innerHTML = `<div class="players-empty">${t("ui.playersEmpty")}</div>`;
-        return;
-      }
-      if (playersListEl.querySelector(".players-empty")) {
-        playersListEl.innerHTML = "";
-      }
-
-      const existingRows = new Map();
-      playersListEl.querySelectorAll(".players-list-row[data-player-row-id]").forEach((rowEl) => {
-        existingRows.set(rowEl.dataset.playerRowId, rowEl);
-      });
-      const fragment = document.createDocumentFragment();
-      const activeTurnPlayerId = getActivePlayers()[state.turnIndex]?.id || "";
-
-      state.players.forEach((player, index) => {
-        let rowEl = existingRows.get(player.id);
-        if (!rowEl) {
-          rowEl = document.createElement("div");
-          rowEl.className = "players-list-row";
-          rowEl.dataset.playerRowId = player.id;
-          const removeTitle = t("ui.removePlayer");
-          rowEl.innerHTML = `
-            <button class="players-list-item" data-player-id="${player.id}"></button>
-            <button class="players-remove" data-remove-player-id="${player.id}" title="${removeTitle}" aria-label="${removeTitle}">×</button>
-          `;
+      const perf = beginPerf("render.playersMenu");
+      try {
+        if (state.players.length === 0) {
+          if (playersListEl.children.length > 0 || playersListEl.querySelector(".players-empty")) {
+            playersListEl.innerHTML = `<div class="players-empty">${t("ui.playersEmpty")}</div>`;
+          }
+          return;
+        }
+        if (playersListEl.querySelector(".players-empty")) {
+          playersListEl.innerHTML = "";
         }
 
-        const selectBtnEl = rowEl.querySelector("[data-player-id]");
-        const removeBtnEl = rowEl.querySelector("[data-remove-player-id]");
-        const classes = [
-          "players-list-item",
-          player.id === activeTurnPlayerId ? "active-turn" : "",
-          player.id === state.selectedPlayerId ? "selected-player" : ""
-        ].filter(Boolean).join(" ");
+        const existingRows = new Map();
+        playersListEl.querySelectorAll(".players-list-row[data-player-row-id]").forEach((rowEl) => {
+          existingRows.set(rowEl.dataset.playerRowId, rowEl);
+        });
+        const fragment = document.createDocumentFragment();
+        const activeTurnPlayerId = getActivePlayers()[state.turnIndex]?.id || "";
 
-        selectBtnEl.className = classes;
-        selectBtnEl.dataset.playerId = player.id;
-        const avatarHtml = player.avatar
-          ? `<img class="player-avatar" src="${player.avatar}" alt="avatar" onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}'">`
-          : "";
-        const statusText = isPlayerFinished(player)
-          ? t("ui.finishStatus", { order: player.finishOrder || "?" })
-          : "";
-        const tileLabel = t("ui.tile");
-        selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${formatHp(player.hp)}</span>, ${formatGold(player.gold)}${statusText})</span>`;
-        removeBtnEl.dataset.removePlayerId = player.id;
+        state.players.forEach((player, index) => {
+          let rowEl = existingRows.get(player.id);
+          if (!rowEl) {
+            rowEl = document.createElement("div");
+            rowEl.className = "players-list-row";
+            rowEl.dataset.playerRowId = player.id;
+            const removeTitle = t("ui.removePlayer");
+            rowEl.innerHTML = `
+              <button class="players-list-item" data-player-id="${player.id}"></button>
+              <button class="players-remove" data-remove-player-id="${player.id}" title="${removeTitle}" aria-label="${removeTitle}">\u00D7</button>
+            `;
+          }
 
-        fragment.appendChild(rowEl);
-        existingRows.delete(player.id);
-      });
+          rowEl._selectBtnEl = rowEl._selectBtnEl || rowEl.querySelector("[data-player-id]");
+          rowEl._removeBtnEl = rowEl._removeBtnEl || rowEl.querySelector("[data-remove-player-id]");
+          const selectBtnEl = rowEl._selectBtnEl;
+          const removeBtnEl = rowEl._removeBtnEl;
+          const classes = [
+            "players-list-item",
+            player.id === activeTurnPlayerId ? "active-turn" : "",
+            player.id === state.selectedPlayerId ? "selected-player" : ""
+          ].filter(Boolean).join(" ");
 
-      existingRows.forEach((rowEl) => rowEl.remove());
-      playersListEl.appendChild(fragment);
+          selectBtnEl.className = classes;
+          selectBtnEl.dataset.playerId = player.id;
+          const avatarInitial = (player.name || "?").trim().charAt(0).toUpperCase() || "?";
+          const avatarHue = getAvatarHueSeed(player);
+          const avatarHtml = player.avatar
+            ? `<img class="player-avatar" src="${player.avatar}" alt="avatar" onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span class=&quot;player-avatar-fallback&quot; style=&quot;--avatar-hue:${avatarHue};&quot;>${avatarInitial}</span>');">`
+            : `<span class="player-avatar-fallback" style="--avatar-hue:${avatarHue};">${avatarInitial}</span>`;
+          const statusText = isPlayerFinished(player)
+            ? t("ui.finishStatus", { order: player.finishOrder || "?" })
+            : "";
+          const tileLabel = t("ui.tile");
+          selectBtnEl.innerHTML = `${avatarHtml}<span class="player-row-text">${index + 1}. ${player.name} (${tileLabel} ${player.position}, <span class="player-hp">${formatHp(player.hp)}</span>, ${formatGold(player.gold)}${statusText})</span>`;
+          removeBtnEl.dataset.removePlayerId = player.id;
+
+          fragment.appendChild(rowEl);
+          existingRows.delete(player.id);
+        });
+
+        existingRows.forEach((rowEl) => rowEl.remove());
+        playersListEl.appendChild(fragment);
+      } finally {
+        endPerf(perf);
+      }
     }
 
     function renderTurnManager() {
@@ -3360,13 +3887,17 @@ const state = {
       if (player.fortuneQuest) {
         const toneClass = player.fortuneQuest.omenType === "bad" ? "bad-event" : "good-event";
         const toneBadgeClass = player.fortuneQuest.omenType === "bad" ? "bad" : "good";
-        const toneLabel = player.fortuneQuest.omenLabel || t("ui.eventLabel");
+        const toneLabel = player.fortuneQuest.omenType === "bad"
+          ? t("ui.omenBad")
+          : player.fortuneQuest.omenType === "good"
+            ? t("ui.omenGood")
+            : (player.fortuneQuest.omenLabel || t("ui.eventLabel"));
         effects.push(`
           <div class="effect-item ${toneClass}">
             <div class="effect-name">${t("ui.prophecyTitle")} ${getCellTypeIcon("fortuneTeller")}</div>
             <div class="effect-tone ${toneBadgeClass}">${toneLabel}</div>
             <div class="effect-desc"><strong>${t("ui.prophecyActive")}</strong> ${getFortuneQuestConditionText(player.fortuneQuest)}</div>
-            <div class="effect-desc"><strong>${t("ui.prophecyHint")}</strong> ${getFortuneQuestDebugConditionText(player.fortuneQuest)}</div>
+            <div class="effect-desc"><strong>${t("ui.prophecyHint")}</strong> <span class="hint-blur">${getFortuneQuestDebugConditionText(player.fortuneQuest)}</span></div>
           </div>
         `);
       }
@@ -3418,6 +3949,8 @@ const state = {
         player.alchemyCrystal,
         player.bootsActive ? 1 : 0,
         player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : "",
+        state.players.map((entry) => `${entry.id}:${entry.position}:${entry.gold}`).join(";"),
+        String(tradeTargetByPlayerId.get(player.id) || ""),
         state.rolling ? 1 : 0
       ].join("|");
       if (signature === lastStatsSignature) {
@@ -3426,9 +3959,12 @@ const state = {
       }
       const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: true });
       const effectsHtml = buildEffectsPanelHtml(player);
+      const canOpenTrade = getAdjacentPlayersFor(player).length > 0;
+      const tradeOpenTitle = canOpenTrade ? t("ui.tradeOpenTitle") : t("ui.tradeUnavailableTitle");
       playerStatsEl.innerHTML = `
         <div class="player-header">
           <span class="player-name">${player.name}</span>
+          <button class="trade-open-btn" data-open-trade="true" type="button" title="${tradeOpenTitle}" ${canOpenTrade ? "" : "disabled"}>\u21C4</button>
           <span class="player-meta">
             <span class="player-gold">${formatHp(player.hp)}</span>
             <span class="player-gold">${formatGold(player.gold)}</span>
@@ -3436,21 +3972,35 @@ const state = {
         </div>
         <div><strong>${t("ui.inventoryTitle")}:</strong></div>
         <div class="inventory-slots">${slotsHtml}</div>
-        
         ${effectsHtml}
       `;
 
       rollBtnEl.disabled = state.rolling || state.gameEnded || isPlayerFinished(player);
       lastStatsSignature = signature;
+      if (tradeOverlayEl && tradeOverlayEl.classList.contains("visible")) {
+        renderTradeOverlay();
+      }
     }
 
     function ensureToken(player) {
       let token = tokenElsById.get(player.id) || null;
       if (!token) {
         token = document.createElement("div");
+        const imgEl = document.createElement("img");
+        const labelEl = document.createElement("span");
         token.className = "token";
         token.dataset.token = player.id;
-        token.innerHTML = `<img class="token-avatar" src="${player.avatar || DEFAULT_AVATAR}" alt="avatar"><span class="token-label">${player.name.charAt(0).toUpperCase()}</span>`;
+        imgEl.className = "token-avatar";
+        imgEl.alt = "avatar";
+        imgEl.onerror = function onTokenAvatarError() {
+          this.onerror = null;
+          token.classList.add("no-avatar");
+        };
+        labelEl.className = "token-label";
+        token.appendChild(imgEl);
+        token.appendChild(labelEl);
+        token._imgEl = imgEl;
+        token._labelEl = labelEl;
         token.addEventListener("click", (event) => {
           event.stopPropagation();
           if (state.rolling) return;
@@ -3458,6 +4008,19 @@ const state = {
         });
         tokensLayerEl.appendChild(token);
         tokenElsById.set(player.id, token);
+      }
+      const hasAvatar = Boolean(String(player.avatar || "").trim());
+      const avatarHue = getAvatarHueSeed(player);
+      token.classList.toggle("no-avatar", !hasAvatar);
+      token.style.setProperty("--avatar-hue", String(avatarHue));
+      if (token._imgEl && hasAvatar && token._imgEl.src !== player.avatar) {
+        token._imgEl.src = player.avatar;
+      }
+      if (token._labelEl) {
+        const nextLabel = player.name.charAt(0).toUpperCase();
+        if (token._labelEl.textContent !== nextLabel) {
+          token._labelEl.textContent = nextLabel;
+        }
       }
       return token;
     }
@@ -3578,17 +4141,20 @@ const state = {
 
       const cellSizePx = getBoardCellSizePx();
       const stackOffsetsByCell = new Map();
+      const stackMetaByPlayerId = new Map();
       groups.forEach((stack, position) => {
         const sampleToken = ensureToken(stack[0]);
         const tokenSizePx = sampleToken.offsetWidth || 24;
         stackOffsetsByCell.set(position, buildTokenOffsetsForStack(stack.length, tokenSizePx, cellSizePx));
+        stack.forEach((stackPlayer, index) => {
+          stackMetaByPlayerId.set(stackPlayer.id, index);
+        });
       });
 
       state.players.forEach((player) => {
         if (!forceFull && positionSet && !positionSet.has(player.position)) return;
         const token = ensureToken(player);
-        const stack = groups.get(player.position) || [];
-        const stackIndex = stack.findIndex((p) => p.id === player.id);
+        const stackIndex = stackMetaByPlayerId.get(player.id) ?? 0;
         const offsets = stackOffsetsByCell.get(player.position) || [];
         const offset = offsets[stackIndex] || { x: 0, y: 0 };
         const center = getCellCenter(player.position);
@@ -3602,13 +4168,6 @@ const state = {
           token.classList.toggle("active", isActive);
           token.style.zIndex = isActive ? "50" : String(1 + stackIndex);
           applyTokenTransform(token, isActive);
-        }
-        // Ensure avatar image is up to date
-        const img = token.querySelector && token.querySelector('img.token-avatar');
-        if (img) {
-          const src = player.avatar || DEFAULT_AVATAR;
-          if (img.src !== src) img.src = src;
-          img.onerror = function () { this.onerror = null; this.src = DEFAULT_AVATAR; };
         }
       });
 
@@ -4755,14 +5314,108 @@ const state = {
         if (slot.dataset.disabled === "true") return;
         useInventoryItem(slot.dataset.useItem);
       });
+      inventoryOverlayEl.addEventListener("click", (event) => {
+        const openTradeBtn = event.target.closest("[data-open-trade]");
+        if (!openTradeBtn) return;
+        const playerId = String(inventoryOverlayEl.dataset.playerId || "");
+        if (!playerId) return;
+        if (state.selectedPlayerId !== playerId) {
+          Actions.selectPlayer(playerId);
+        }
+        openTradeOverlay();
+      });
       playerStatsEl.addEventListener("click", (event) => {
         const slot = event.target.closest("[data-use-item]");
-        if (!slot) return;
-        if (slot.dataset.disabled === "true") return;
-        const player = selectedPlayer();
-        if (!player) return;
-        useInventoryItem(slot.dataset.useItem, player.id);
+        if (slot) {
+          if (slot.dataset.disabled === "true") return;
+          const player = selectedPlayer();
+          if (!player) return;
+          useInventoryItem(slot.dataset.useItem, player.id);
+          return;
+        }
+        const openTradeBtn = event.target.closest("[data-open-trade]");
+        if (openTradeBtn) {
+          openTradeOverlay();
+          return;
+        }
       });
+      if (tradeBodyEl) {
+        tradeBodyEl.addEventListener("click", (event) => {
+        const tradeSlot = event.target.closest("[data-trade-select]");
+        if (tradeSlot) {
+          const owner = selectedPlayer();
+          if (!owner) return;
+          const tradeSelection = getTradeSelectionState(owner.id);
+          const role = String(tradeSlot.dataset.tradeSelect || "");
+          const itemId = String(tradeSlot.dataset.tradeItem || "");
+          if (!itemId) return;
+          const key = role === "give" ? "giveItems" : role === "get" ? "getItems" : "";
+          if (!key) return;
+          const selectedItems = new Set(tradeSelection[key]);
+          if (selectedItems.has(itemId)) {
+            selectedItems.delete(itemId);
+          } else {
+            selectedItems.add(itemId);
+          }
+          tradeSelection[key] = [...selectedItems];
+          renderTradeOverlay();
+          return;
+        }
+        const submitTradeBtn = event.target.closest("[data-trade-submit]");
+        if (submitTradeBtn) {
+          const owner = selectedPlayer();
+          if (!owner || state.gameEnded) return;
+          const targetSelect = tradeBodyEl.querySelector("[data-trade-target-select]");
+          const giveItemEls = Array.from(tradeBodyEl.querySelectorAll('[data-trade-select="give"][data-trade-selected="true"]'));
+          const giveGoldEl = tradeBodyEl.querySelector("[data-trade-give-gold]");
+          const getItemEls = Array.from(tradeBodyEl.querySelectorAll('[data-trade-select="get"][data-trade-selected="true"]'));
+          const getGoldEl = tradeBodyEl.querySelector("[data-trade-get-gold]");
+          const tradePanelEl = tradeBodyEl.querySelector("[data-trade-owner-id]");
+          const targetId = String(targetSelect?.value || tradePanelEl?.dataset.tradeTargetId || "");
+          const target = state.players.find((entry) => entry.id === targetId) || null;
+          if (!target) return;
+
+          const success = applyUnifiedTrade(owner, target, {
+            giveItems: giveItemEls.map((el) => String(el.dataset.tradeItem || "")).filter(Boolean),
+            giveGold: Number(giveGoldEl?.value || 0),
+            getItems: getItemEls.map((el) => String(el.dataset.tradeItem || "")).filter(Boolean),
+            getGold: Number(getGoldEl?.value || 0)
+          });
+          if (success) {
+            const sealEl = tradeBodyEl.querySelector("[data-trade-seal]");
+            if (sealEl) {
+              sealEl.classList.add("active");
+              window.setTimeout(() => sealEl.classList.remove("active"), 850);
+            }
+          }
+          return;
+        }
+      });
+      tradeBodyEl.addEventListener("change", (event) => {
+        const targetSelect = event.target.closest("[data-trade-target-select]");
+        if (targetSelect) {
+          const owner = selectedPlayer();
+          if (!owner) return;
+          tradeTargetByPlayerId.set(owner.id, String(targetSelect.value || ""));
+          renderTradeOverlay();
+          return;
+        }
+        syncTradeSubmitState();
+      });
+      tradeBodyEl.addEventListener("input", (event) => {
+        const goldInput = event.target.closest("[data-trade-give-gold], [data-trade-get-gold]");
+        if (!goldInput) return;
+        syncTradeSubmitState();
+      });
+      }
+      if (closeTradeBtnEl) {
+        closeTradeBtnEl.addEventListener("click", closeTradeOverlay);
+      }
+      if (tradeOverlayEl) {
+        tradeOverlayEl.addEventListener("click", (event) => {
+          if (event.target === tradeOverlayEl) closeTradeOverlay();
+        });
+      }
       boardEl.addEventListener("contextmenu", handleBoardContextMenu);
       closeShopBtnEl.addEventListener("click", hideTileContextMenu);
       shopOverlayEl.addEventListener("click", (event) => {
@@ -4858,6 +5511,7 @@ const state = {
         }
         if (event.key === "Escape") hideTileContextMenu();
         if (event.key === "Escape") closeInventoryOverlay();
+        if (event.key === "Escape") closeTradeOverlay();
         if (event.key === "Escape") closeVictoryOverlay();
         if (event.key === "Escape" && mainMenuEl) {
           const isOpen = !mainMenuEl.classList.contains("is-hidden");
@@ -4880,7 +5534,7 @@ const state = {
       });
 
       window.addEventListener("resize", () => {
-        syncBoardScaleVars();
+        rafDebounceSyncScale();
         invalidateCellCenterCache();
         renderBoardStaticLayer();
         queueRender({
@@ -4992,3 +5646,4 @@ const state = {
     }
 
     init();
+

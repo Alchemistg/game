@@ -147,6 +147,16 @@
         tradeNoTarget: "-- Рядом никого нет --",
         tradeErrorDistance: "Игрок слишком далеко для обмена.",
         tradeErrorInventory: "Инвентарь получателя полон.",
+        tradePanelNoDeal: "Нет игроков на той же клетке для обмена.",
+        tradeSeal: "СКРЕПЛЕНО",
+        tradeContractTitle: "КОНТРАКТ РАВНОЦЕННОГО ОБМЕНА",
+        tradePlayerGives: "{name} ОТДАЕТ",
+        tradeSealBtn: "Скрепить контракт",
+        tradeSubmitNeedOffer: "Добавьте золото или предметы в контракт.",
+        tradeSubmitSameOffer: "Одинаковый обмен нельзя скрепить.",
+        tradeSelectPlayerPrompt: "Выберите игрока для обмена.",
+        tradeOpenTitle: "Открыть обмен",
+        tradeUnavailableTitle: "Обмен недоступен",
         moveToTileBtn: "Перенести избранника на плиту",
         selectSessionAriaLabel: "Сессия для загрузки",
         renameSessionBtn: "Переименовать",
@@ -429,6 +439,16 @@
         tradeNoTarget: "-- No neighbor found --",
         tradeErrorDistance: "Player is too far to trade.",
         tradeErrorInventory: "Recipient's inventory is full.",
+        tradePanelNoDeal: "No players on the same tile are available for a deal.",
+        tradeSeal: "SEALED",
+        tradeContractTitle: "FAIR TRADE CONTRACT",
+        tradePlayerGives: "{name} GIVES",
+        tradeSealBtn: "Seal contract",
+        tradeSubmitNeedOffer: "Add gold or items to the contract.",
+        tradeSubmitSameOffer: "You cannot seal an identical trade.",
+        tradeSelectPlayerPrompt: "Select a player for trade.",
+        tradeOpenTitle: "Open trade",
+        tradeUnavailableTitle: "Trade unavailable",
         moveToTileBtn: "Move chosen one to tile",
         selectSessionAriaLabel: "Session to load",
         renameSessionBtn: "Rename",
@@ -714,6 +734,16 @@
         tradeNoTarget: "-- Поруч нікого немає --",
         tradeErrorDistance: "Гравець занадто далеко для обміну.",
         tradeErrorInventory: "Інвентар отримувача повний.",
+        tradePanelNoDeal: "Немає гравців на тій самій клітинці для обміну.",
+        tradeSeal: "СКРІПЛЕНО",
+        tradeContractTitle: "КОНТРАКТ РІВНОЦІННОГО ОБМІНУ",
+        tradePlayerGives: "{name} ВІДДАЄ",
+        tradeSealBtn: "Скріпити контракт",
+        tradeSubmitNeedOffer: "Додайте золото або предмети в контракт.",
+        tradeSubmitSameOffer: "Однаковий обмін не можна скріпити.",
+        tradeSelectPlayerPrompt: "Виберіть гравця для обміну.",
+        tradeOpenTitle: "Відкрити обмін",
+        tradeUnavailableTitle: "Обмін недоступний",
         moveToTileBtn: "Перенести обраного на плиту",
         inventoryName: "Гравець",
         closePanel: "×",
@@ -985,6 +1015,56 @@
     return text;
   }
 
+  function translateOracleConditionText(text, lang) {
+    const value = String(text || "").trim();
+    if (!value) return value;
+    const reachCellMatch = value.match(/^Fate points to a marked spot ahead; roughly (\d+) steps away\.$/);
+    if (reachCellMatch) {
+      const stepHint = Number(reachCellMatch[1]) || 0;
+      if (lang === "uk") return t("ui.reachCellHint", { stepHint }, "uk");
+      if (lang === "ru") return t("ui.reachCellHint", { stepHint }, "ru");
+    }
+    return value;
+  }
+
+  function normalizeTradeLogLabel(text, lang) {
+    const value = String(text || "").trim();
+    if (!value) return value;
+    const mapByLang = {
+      ru: {
+        shields: "печати защиты",
+        shield: "печать защиты",
+        boots: "ритуальные поножи",
+        gold: "золото",
+        nothing: "ничего"
+      },
+      uk: {
+        shields: "печатки захисту",
+        shield: "печатку захисту",
+        boots: "ритуальні поножі",
+        gold: "золото",
+        nothing: "нічого"
+      },
+      en: {
+        "печати защиты": "protection seals",
+        "печатки захисту": "protection seals",
+        "печать защиты": "protection seal",
+        "печатку захисту": "protection seal",
+        "ритуальные поножи": "ritual greaves",
+        "ритуальні поножі": "ritual greaves",
+        "золото": "gold",
+        "ничего": "nothing",
+        "нічого": "nothing"
+      }
+    };
+    const dict = mapByLang[lang] || {};
+    let out = value;
+    Object.entries(dict).forEach(([from, to]) => {
+      out = out.replaceAll(from, to);
+    });
+    return out;
+  }
+
   function translateLogMessage(message, lang) {
     const text = String(message || "");
     if (!text) return text;
@@ -996,6 +1076,7 @@
 
     const goldIcon = t("ui.iconGold", {}, lang) || "💰";
     const patterns = [
+      [/^Trade: (.+) gives (.+), gets (.+)\.$/, (m, a, b, c) => lang === "uk" ? `Торгівля: ${a} передає ${normalizeTradeLogLabel(b, "uk")}, отримує ${normalizeTradeLogLabel(c, "uk")}.` : `Торговля: ${a} передает ${normalizeTradeLogLabel(b, "ru")}, получает ${normalizeTradeLogLabel(c, "ru")}.`],
       [/^(.+) gives (\d+)💰 to (.+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} передає ${c} ${b}💰.` : `${a} передает ${c} ${b}💰.`],
       [/^(.+) hands "(.+)" to (.+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} передає ${c} предмет "${b}".` : `${a} передает ${c} предмет "${b}".`],
       [/^(.+) hits a trap .* and takes (\d+) HP damage \((\d+) -> (\d+)\)\.$/i, (m, a, b, c, d) => lang === "uk" ? `${a} потрапив у пастку й отримує ${b} шкоди HP (${c} -> ${d}).` : `${a} попал в ловушку и получает ${b} урона по HP (${c} -> ${d}).`],
@@ -1007,7 +1088,7 @@
       [/^(.+) approaches the Oracle .* but lacks (\d+)💰 for the ritual\.$/, (m, a, b) => lang === "uk" ? `${a} підходить до Оракула, але йому бракує ${b}💰 для ритуалу.` : `${a} подходит к Гадалке, но ему не хватает ${b}💰 для ритуала.`],
       [/^(.+) already has an active prophecy: (.+)$/, (m, a, b) => lang === "uk" ? `${a} уже має активне пророцтво: ${b}` : `${a} уже имеет активное предсказание: ${b}`],
       [/^(.+) pays (\d+)💰 to the Oracle .* and receives the sign: (.+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 Оракулу й отримує знак: ${c}.` : `${a} платит ${b}💰 Гадалке и получает знак: ${c}.`],
-      [/^Oracle wording for (.+?): (.+)$/, (m, a, b) => lang === "uk" ? `Формулювання Оракула для ${a}: ${b}` : `Формулировка Гадалки для ${a}: ${b}`],
+      [/^Oracle wording for (.+?): (.+)$/, (m, a, b) => lang === "uk" ? `Формулювання Оракула для ${a}: ${translateOracleConditionText(b, "uk")}` : `Формулировка Гадалки для ${a}: ${translateOracleConditionText(b, "ru")}`],
       [/^(.+) enters the Shadow market .* but lacks (\d+)💰 for the deal\.$/, (m, a, b) => lang === "uk" ? `${a} заходить на Тіньовий торг, але йому бракує ${b}💰 для угоди.` : `${a} зашел на Черный рынок, но ему не хватает ${b}💰 для сделки.`],
       [/^(.+) pays (\d+)💰 at the Shadow market .* and lands a profitable deal: \+(\d+)💰\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 на Тіньовому торзі та зриває вигідну угоду: +${c}💰.` : `${a} платит ${b}💰 на Черном рынке и срывает выгодную сделку: +${c}💰.`],
       [/^(.+) pays (\d+)💰 at the Shadow market .* and gets tricked and loses another (\d+)💰\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 на Тіньовому торзі, але потрапляє на обман і втрачає ще ${c}💰.` : `${a} платит ${b}💰 на Черном рынке, но попадает в обман и теряет еще ${c}💰.`],
@@ -1074,7 +1155,10 @@
       [/^(.+?) подходит к Гадалке .* но не хватает (\d+)💰 для ритуала\.$/, (m, a, b) => lang === "uk" ? `${a} підходить до Оракула, але йому бракує ${b}💰 для ритуалу.` : `${a} approaches the Oracle, but lacks ${b}💰 for the ritual.`],
       [/^(.+?) уже имеет активное предсказание: (.+)$/, (m, a, b) => lang === "uk" ? `${a} уже має активне пророцтво: ${b}` : `${a} already has an active prophecy: ${b}`],
       [/^(.+?) платит (\d+)💰 Гадалке .* и получает знак: (.+)\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 Оракулу й отримує знак: ${c}.` : `${a} pays ${b}💰 to the Oracle and receives the sign: ${c}.`],
-      [/^Формулировка Гадалки для (.+?): (.+)$/, (m, a, b) => lang === "uk" ? `Формулювання Оракула для ${a}: ${b}` : `Oracle wording for ${a}: ${b}`],
+      [/^Формулировка Гадалки для (.+?): (.+)$/, (m, a, b) => lang === "uk" ? `Формулювання Оракула для ${a}: ${translateOracleConditionText(b, "uk")}` : `Oracle wording for ${a}: ${translateOracleConditionText(b, "en")}`],
+      [/^Формулювання Оракула для (.+?): (.+)$/, (m, a, b) => lang === "ru" ? `Формулировка Гадалки для ${a}: ${translateOracleConditionText(b, "ru")}` : `Oracle wording for ${a}: ${translateOracleConditionText(b, "en")}`],
+      [/^Торговля: (.+) передает (.+), получает (.+)\.$/, (m, a, b, c) => lang === "uk" ? `Торгівля: ${a} передає ${normalizeTradeLogLabel(b, "uk")}, отримує ${normalizeTradeLogLabel(c, "uk")}.` : `Trade: ${a} gives ${normalizeTradeLogLabel(b, "en")}, gets ${normalizeTradeLogLabel(c, "en")}.`],
+      [/^Торгівля: (.+) передає (.+), отримує (.+)\.$/, (m, a, b, c) => lang === "ru" ? `Торговля: ${a} передает ${normalizeTradeLogLabel(b, "ru")}, получает ${normalizeTradeLogLabel(c, "ru")}.` : `Trade: ${a} gives ${normalizeTradeLogLabel(b, "en")}, gets ${normalizeTradeLogLabel(c, "en")}.`],
       [/^(.+?) зашел на Черный рынок .* но ему не хватает (\d+)💰 для сделки\.$/, (m, a, b) => lang === "uk" ? `${a} зайшов на Тіньовий торг, але йому бракує ${b}💰 для угоди.` : `${a} entered the Shadow market, but lacks ${b}💰 for the deal.`],
       [/^(.+?) платит (\d+)💰 на Черном рынке .* и срывает выгодную сделку: \+(\d+)💰\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 на Тіньовому торзі та зриває вигідну угоду: +${c}💰.` : `${a} pays ${b}💰 at the Shadow market and lands a profitable deal: +${c}💰.`],
       [/^(.+?) платит (\d+)💰 на Черном рынке .* но попадает в обман и теряет еще (\d+)💰\.$/, (m, a, b, c) => lang === "uk" ? `${a} сплачує ${b}💰 на Тіньовому торзі, але потрапляє на обман і втрачає ще ${c}💰.` : `${a} pays ${b}💰 at the Shadow market, but gets tricked and loses another ${c}💰.`],

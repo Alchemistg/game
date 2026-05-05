@@ -289,6 +289,7 @@
       <div class="inventory-header"> 
         <div class="player-header">
           <span id="inventoryName" class="player-name" data-i18n="ui.inventoryName">Игрок</span>
+          <button class="trade-open-btn" data-open-trade="true" type="button" title="Открыть обмен">⇄</button>
           <span class="player-meta">
             <span id="inventoryHp" class="player-gold">0/0 ❤️</span>
             <span id="inventoryGold" class="player-gold">0 💰</span>
@@ -297,6 +298,15 @@
         <button id="closeInventoryBtn" class="modal-close-btn" type="button" data-i18n="ui.closePanel" aria-label="Закрыть" data-i18n-aria-label="ui.closePanel">×</button>
       </div>
       <div id="inventoryBody" class="inventory-body"></div>
+    </div>
+  </div>
+  <div id="tradeOverlay" class="inventory-overlay">
+    <div class="inventory-modal trade-modal">
+      <div class="inventory-header">
+        <h3 class="inventory-title">Контракт обмена</h3>
+        <button id="closeTradeBtn" class="modal-close-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div id="tradeBody" class="trade-body"></div>
     </div>
   </div>
   <div id="victoryOverlay" class="inventory-overlay">
