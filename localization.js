@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   const bundles = {
@@ -181,6 +181,8 @@
         blackMarketBuyThrown: "{name} платит {price} и его выбрасывают: {from} -> {to}.",
         blackMarketBuyCheated: "{name} платит {price} за \"{item}\", но его обманули и забрали ещё {loss}.",
         adrenalineTriggered: "{name} тратит 🧪 Адреналин и выживает с 1 HP.",
+        smallHealPotionUsed: "{name} использует Малое зелье лечения и восстанавливает {restored}♥ ({before} -> {after}).",
+        lotteryTicketUsed: "{name} раскрывает Лотерейный билет и получает +{gold}.",
         blackMarketSellSuccess: "{name} продаёт 1x \"{item}\" за +{gold}.",
         blackMarketSellNoGold: "{name} отдаёт 1x \"{item}\", но не получает ничего в ответ.",
         blackMarketSellHurt: "{name} получает рану на {damage} HP ({before} -> {after}) во время сделки.",
@@ -251,9 +253,12 @@
         shield: { name: "Печать защиты (блок ловушки)", desc: "Гасит действие проклятой клетки" },
         luckCharm: { name: "Талисман удачи", desc: "Снижает вероятность плохих событий" },
         adrenaline: { name: "Адреналин", desc: "Спасает от смерти" },
+        smallHealPotion: { name: "Малое зелье лечения", desc: "Восстанавливает 25 HP" },
         trapKit: { name: "Набор проклятых печатей", desc: "Накладывает проклятую печать на выбранную клетку" },
         rerollStone: { name: "Камень второго знака", desc: "Позволяет пройти новый знак: 1-6 клеток" },
-        alchemyCrystal: { name: "Кровавый осколок", desc: "Высвобождает +25 золота" }
+        lotteryTicket: { name: "Лотерейный билет", desc: "При использовании приносит случайную награду от 0 до 100 золота" },
+        alchemyCrystal: { name: "Алмаз", desc: "Дорогой товар, который выгодно продать." },
+        fakeCrystal: { name: "Поддельный алмаз", desc: "Продаётся по той же цене, что и алмаз." }
       },
       cellTypes: {
         trap: "Проклятие",
@@ -288,6 +293,9 @@
         shopAction: "Открыть лавку",
         buy: { title: "Покупка", body: "Купите любой предмет. Предмет появится в реликвиях игрока, а золото спишется." },
         inventory: { title: "Инвентарь", body: "Откройте игрока, чтобы увидеть HP, золото, предметы и активные эффекты." },
+        effects: { title: "Эффекты", body: "Здесь отображаются активные состояния игрока: бонусы и особые условия, влияющие на ход." },
+        trade: { title: "Обмен", body: "Если два игрока стоят на одной клетке, можно открыть обмен и передать золото или предметы через контракт." },
+        tradeAction: "К обмену",
         keeper: { title: "Воля Хранителя", body: "Эта панель нужна ведущему: можно выдать золото или предмет, наказать, перенести на выбранную клетку и отменить ход." },
         logs: { title: "Хроники", body: "Откройте логи. Там собирается история ритуала, ее можно фильтровать и копировать." },
         done: { title: "Круг открыт", body: "Обучение завершено. Цель партии проста: провести избранников к Святилищу." },
@@ -473,6 +481,8 @@
         blackMarketBuyThrown: "{name} pays {price} and gets thrown: {from} -> {to}.",
         blackMarketBuyCheated: "{name} pays {price} for \"{item}\", but gets cheated and loses an extra {loss}.",
         adrenalineTriggered: "{name} burns 🧪 Adrenaline and survives at 1 HP.",
+        smallHealPotionUsed: "{name} uses a Small healing potion and restores {restored}♥ ({before} -> {after}).",
+        lotteryTicketUsed: "{name} opens a Lottery ticket and gets +{gold}.",
         blackMarketSellSuccess: "{name} sells 1x \"{item}\" for +{gold}.",
         blackMarketSellNoGold: "{name} hands over 1x \"{item}\", but gets nothing in return.",
         blackMarketSellHurt: "{name} gets hurt for {damage} HP ({before} -> {after}) during the deal.",
@@ -542,9 +552,12 @@
         shield: { name: "Protection seal (blocks traps)", desc: "Cancels the effect of a cursed cell" },
         luckCharm: { name: "Luck talisman", desc: "Reduces chance of bad events" },
         adrenaline: { name: "Adrenaline", desc: "Saves you from death" },
+        smallHealPotion: { name: "Small healing potion", desc: "Restores 25 HP" },
         trapKit: { name: "Cursed seal kit", desc: "Places a cursed seal on a chosen cell" },
         rerollStone: { name: "Second sign stone", desc: "Lets you roll a new sign: 1-6 cells" },
-        alchemyCrystal: { name: "Blood shard", desc: "Releases +25 gold" }
+        lotteryTicket: { name: "Lottery ticket", desc: "When used, grants a random reward from 0 to 100 gold" },
+        alchemyCrystal: { name: "Diamond", desc: "Valuable trade good with high resale value." },
+        fakeCrystal: { name: "Counterfeit diamond", desc: "Sells for the same price as a diamond." }
       },
       cellTypes: {
         trap: "Curse",
@@ -579,6 +592,9 @@
         shopAction: "Open Shop",
         buy: { title: "Purchase", body: "Buy any item. It will appear in the player's relics, and gold will be spent." },
         inventory: { title: "Inventory", body: "Open the player to see HP, gold, items, and active effects." },
+        effects: { title: "Effects", body: "This panel shows active statuses: bonuses and special conditions affecting turns." },
+        trade: { title: "Trade", body: "If two players stand on the same tile, open trade and exchange gold or items via a contract." },
+        tradeAction: "Go to Trade",
         keeper: { title: "Keeper's Will", body: "This panel is for the Game Master: grant gold or items, punish, move, or undo turns." },
         logs: { title: "Chronicles", body: "Open the logs. The history of the ritual is gathered here; it can be filtered and copied." },
         done: { title: "Circle Opened", body: "Tutorial complete. The goal is simple: lead the chosen ones to the Sanctuary." },
@@ -765,6 +781,8 @@
         blackMarketBuyThrown: "{name} платить {price} і його викидають: {from} -> {to}.",
         blackMarketBuyCheated: "{name} платить {price} за \"{item}\", але його обдурили й забрали ще {loss}.",
         adrenalineTriggered: "{name} витрачає 🧪 Адреналін і виживає з 1 HP.",
+        smallHealPotionUsed: "{name} використовує Мале зілля лікування та відновлює {restored}♥ ({before} -> {after}).",
+        lotteryTicketUsed: "{name} розкриває Лотерейний квиток і отримує +{gold}.",
         blackMarketSellSuccess: "{name} продає 1x \"{item}\" за +{gold}.",
         blackMarketSellNoGold: "{name} віддає 1x \"{item}\", але не отримує нічого у відповідь.",
         blackMarketSellHurt: "{name} отримує рану на {damage} HP ({before} -> {after}) під час угоди.",
@@ -834,9 +852,12 @@
         shield: { name: "Печатка захисту (блокує пастки)", desc: "Гасить дію проклятої клітинки" },
         luckCharm: { name: "Талісман удачі", desc: "Знижує ймовірність поганих подій" },
         adrenaline: { name: "Адреналін", desc: "Рятує від смерті" },
+        smallHealPotion: { name: "Мале зілля лікування", desc: "Відновлює 25 HP" },
         trapKit: { name: "Набір проклятих печаток", desc: "Накладає прокляту печатку на вибрану клітинку" },
         rerollStone: { name: "Камінь другого знака", desc: "Дозволяє кинути новий знак: 1-6 клітинок" },
-        alchemyCrystal: { name: "Кривавий уламок", desc: "Вивільняє +25 золота" }
+        lotteryTicket: { name: "Лотерейний квиток", desc: "При використанні дає випадкову нагороду від 0 до 100 золота" },
+        alchemyCrystal: { name: "Алмаз", desc: "Дорогий товар, який вигідно продати." },
+        fakeCrystal: { name: "Підроблений алмаз", desc: "Підроблений алмаз продається за такою самою ціною, як і алмаз." }
       },
       cellTypes: {
         trap: "Прокляття",
@@ -871,6 +892,9 @@
         shopAction: "Відкрити крамницю",
         buy: { title: "Купівля", body: "Купіть будь-який предмет. Предмет з'явиться у реліквіях гравця, а золото спишеться." },
         inventory: { title: "Інвентар", body: "Відкрийте гравця, щоб побачити HP, золото, предмети та активні ефекти." },
+        effects: { title: "Ефекти", body: "Тут відображаються активні стани гравця: бонуси та особливі умови, що впливають на хід." },
+        trade: { title: "Обмін", body: "Якщо два гравці стоять на одній клітинці, можна відкрити обмін і передати золото або предмети через контракт." },
+        tradeAction: "До обміну",
         keeper: { title: "Воля Хранителя", body: "Ця панель потрібна ведучому: можна видати золото чи предмет, покарати, перенести на клітинку чи скасувати хід." },
         logs: { title: "Хроніки", body: "Відкрийте логи. Там збирається історія ритуалу, її можна фільтрувати та копіювати." },
         done: { title: "Коло відкрите", body: "Навчання завершено. Мета партії проста: провести обраних до Святилища." },
@@ -1102,7 +1126,6 @@
       [/^(.+): cannot place a trap on start or finish\.$/, (m, a) => lang === "uk" ? `${a}: не можна поставити пастку на старт або фініш.` : `${a}: нельзя поставить ловушку на старт или финиш.`],
       [/^(.+): a trap already exists on tile (\d+)\.$/, (m, a, b) => lang === "uk" ? `${a}: на клітинці ${b} вже є пастка.` : `${a}: на клетке ${b} уже есть ловушка.`],
       [/^(.+) places a cursed seal on tile (\d+)\.$/, (m, a, b) => lang === "uk" ? `${a} накладає прокляту печатку на клітинку ${b}.` : `${a} накладывает проклятую печать на клетку ${b}.`],
-      [/^(.+) shatters a Blood shard and receives \+(\d+)💰\.$/, (m, a, b) => lang === "uk" ? `${a} розколює Кривавий уламок і отримує +${b}💰.` : `${a} раскалывает Кровавый осколок и получает +${b}💰.`],
       [/^(.+) awakens the Second sign stone: (\d+)\. Move: (\d+) -> (\d+)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} пробуджує Камінь другого знака: ${b}. Переміщення: ${c} -> ${d}.` : `${a} пробуждает Камень второго знака: ${b}. Перемещение: ${c} -> ${d}.`],
       [/^A player named "(.+)" already exists\. Choose another name\.$/, (m, a) => lang === "uk" ? `Гравець з іменем "${a}" вже існує. Виберіть інший нік.` : `Игрок с именем "${a}" уже существует. Выберите другой ник.`],
       [/^(.+) enters the game\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `В игру вступает ${a}.`],
@@ -1172,7 +1195,6 @@
       [/^(.+?): нельзя поставить ловушку на старт или финиш\.$/, (m, a) => lang === "uk" ? `${a}: не можна поставити пастку на старт або фініш.` : `${a}: cannot place a trap on start or finish.`],
       [/^(.+?): на клетке (\d+) уже есть ловушка\.$/, (m, a, b) => lang === "uk" ? `${a}: на клітинці ${b} вже є пастка.` : `${a}: a trap already exists on tile ${b}.`],
       [/^(.+?) накладывает проклятую печать на клетку (\d+)\.$/, (m, a, b) => lang === "uk" ? `${a} накладає прокляту печатку на клітинку ${b}.` : `${a} places a cursed seal on tile ${b}.`],
-      [/^(.+?) раскалывает Кровавый осколок и получает \+(\d+)💰\.$/, (m, a, b) => lang === "uk" ? `${a} розколює Кривавий уламок і отримує +${b}💰.` : `${a} shatters a Blood Shard and gets +${b}💰.`],
       [/^(.+?) пробуждает Камень второго знака: (\d+)\. Перемещение: (\d+) -> (\d+)\.$/, (m, a, b, c, d) => lang === "uk" ? `${a} пробуджує Камінь другого знака: ${b}. Переміщення: ${c} -> ${d}.` : `${a} awakens the Second Sign Stone: ${b}. Move: ${c} -> ${d}.`],
       [/^Игрок с именем "(.+)" уже существует\. Выберите другой ник\.$/, (m, a) => lang === "uk" ? `Гравець з іменем "${a}" вже існує. Виберіть інший нік.` : `A player named "${a}" already exists. Choose another name.`],
       [/^В игру вступает (.+)\.$/, (m, a) => lang === "uk" ? `До гри приєднується ${a}.` : `${a} enters the game.`],

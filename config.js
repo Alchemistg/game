@@ -71,9 +71,12 @@
       { id: "shield", nameKey: "items.shield.name", descKey: "items.shield.desc", price: 70 },
       { id: "luckCharm", nameKey: "items.luckCharm.name", descKey: "items.luckCharm.desc", price: 120 },
       { id: "adrenaline", nameKey: "items.adrenaline.name", descKey: "items.adrenaline.desc", price: 150 },
+      { id: "smallHealPotion", nameKey: "items.smallHealPotion.name", descKey: "items.smallHealPotion.desc", price: 55 },
       { id: "trapKit", nameKey: "items.trapKit.name", descKey: "items.trapKit.desc", price: 95 },
       { id: "rerollStone", nameKey: "items.rerollStone.name", descKey: "items.rerollStone.desc", price: 140 },
-      { id: "alchemyCrystal", nameKey: "items.alchemyCrystal.name", descKey: "items.alchemyCrystal.desc", price: 60 }
+      { id: "lotteryTicket", nameKey: "items.lotteryTicket.name", descKey: "items.lotteryTicket.desc", price: 60 },
+      { id: "alchemyCrystal", nameKey: "items.alchemyCrystal.name", descKey: "items.alchemyCrystal.desc", price: 220 },
+      { id: "fakeCrystal", nameKey: "items.fakeCrystal.name", descKey: "items.fakeCrystal.desc", price: 70 }
     ],
 
     SHOP_ITEM_META: {
@@ -83,7 +86,10 @@
       adrenaline: { icon: "🧪" },
       trapKit: { icon: "🧰" },
       rerollStone: { icon: "🎲" },
-      alchemyCrystal: { icon: "💎" }
+      alchemyCrystal: { icon: "💎" },
+      smallHealPotion: { icon: "HP" },
+      lotteryTicket: { icon: "T" },
+      fakeCrystal: { icon: "F" }
     },
 
     CELL_TYPE_META: {

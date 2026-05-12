@@ -1,4 +1,4 @@
-﻿﻿(function (global) {
+﻿﻿﻿﻿(function (global) {
   "use strict";
 
   const SEEN_KEY = "alchemist_dungeon_tutorial_seen_v1";
@@ -95,6 +95,13 @@
       window.addEventListener("scroll", this.boundScroll, true);
       document.addEventListener("keydown", this.boundKeydown);
       void this.run();
+    }
+
+    refresh() {
+      this.steps = this.createSteps();
+      if (this.active && this.tipEl) {
+        this.renderStep(this.steps[this.index], this.currentTarget);
+      }
     }
 
     async run() {
@@ -327,6 +334,22 @@
             await waitFrame();
           },
           waitFor: () => waitForEvent("game:inventory-opened")
+        },
+        {
+          title: t("tutorial.effects.title"),
+          body: t("tutorial.effects.body"),
+          target: ".effects-panel, .effects-title, .inventory-modal .inventory-body",
+          scroll: false
+        },
+        {
+          title: t("tutorial.trade.title"),
+          body: t("tutorial.trade.body"),
+          target: ".trade-open-btn, #tradeOverlay .trade-panel, .trade-modal",
+          actionLabel: t("tutorial.tradeAction"),
+          action: async () => {
+            this.api.closeInventory?.();
+            await waitFrame();
+          }
         },
         {
           title: t("tutorial.keeper.title"),

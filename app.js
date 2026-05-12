@@ -1,4 +1,4 @@
-﻿let CONFIG = window.GAME_CONFIG;
+﻿﻿let CONFIG = window.GAME_CONFIG;
 const CONFIG_OVERRIDES_STORAGE_KEY = "alchemist_dungeon_config_overrides_v1";
 const PENDING_NEW_GAME_KEY = "alchemist_dungeon_pending_new_game_v1";
 const SAVE_PLAYERS_OPTION_KEY = "alchemist_dungeon_save_players_v1";
@@ -95,9 +95,12 @@ CONFIG = window.GAME_CONFIG;
       shield: "shields",
       luckCharm: "luckCharm",
       adrenaline: "adrenaline",
+      smallHealPotion: "smallHealPotion",
       trapKit: "trapKit",
       rerollStone: "rerollStone",
-      alchemyCrystal: "alchemyCrystal"
+      lotteryTicket: "lotteryTicket",
+      alchemyCrystal: "alchemyCrystal",
+      fakeCrystal: "fakeCrystal"
     };
 const state = {
       players: [],
@@ -111,7 +114,7 @@ const state = {
       logFilter: "all",
       gameEnded: false
     };
-    const STATE_VERSION = 5;
+    const STATE_VERSION = 6;
     const elementCache = new Map();
 
     function getEl(id) {
@@ -704,6 +707,7 @@ const DICE_ROTATIONS = {
       logFormatCache = new WeakMap();
 
       applyStaticTranslations();
+      if (tutorialManager) tutorialManager.refresh();
       queueRender({ stats: true, players: true, selectedTile: true, refreshContextMenu: true, refreshInventoryOverlay: true, tokensFull: true });
     }
 
@@ -1837,9 +1841,12 @@ function rafDebounceSyncScale() {
         shields: 0,
         luckCharm: 0,
         adrenaline: 0,
+        smallHealPotion: 0,
         trapKit: 0,
         rerollStone: 0,
         alchemyCrystal: 0,
+        fakeCrystal: 0,
+        lotteryTicket: 0,
         bootsActive: false,
         fortuneQuest: null,
         finished: false,
@@ -1894,13 +1901,13 @@ function rafDebounceSyncScale() {
       const fragment = document.createDocumentFragment();
       shopItemsListEl.innerHTML = "";
       const isShadowMarket = mode === "blackMarket";
-      const blackMarketOnly = new Set(["adrenaline", "trapKit"]);
+      const blackMarketOnly = new Set(["adrenaline", "trapKit", "fakeCrystal"]);
       SHOP_ITEMS.filter((item) => isShadowMarket || !blackMarketOnly.has(item.id)).forEach((item) => {
         const info = SHOP_ITEM_META[item.id] || { icon: iconUnknown() };
         const itemName = getShopItemName(item);
         const itemDesc = getShopItemDesc(item, currentLanguage);
         const slot = document.createElement("div");
-        slot.className = "inv-slot occupied usable";
+        slot.className = `inv-slot occupied usable ${getItemRarityClass(item.id)}`;
         slot.dataset.shopItemId = item.id;
         slot.innerHTML = `
           <span class="item-icon">${info.icon}</span>
@@ -1957,24 +1964,62 @@ function rafDebounceSyncScale() {
       return renderContextPlayerSelect("shop", TEXTS.emptySelect.shop);
     }
 
+    function getSellFactorForItem(itemId) {
+      if (itemId === "alchemyCrystal") return 0.9;
+      return SELL_FACTOR;
+    }
+
+    function getSellPriceForItem(itemId, itemPrice) {
+      if (itemId === "fakeCrystal") {
+        const baseDiamond = SHOP_ITEMS.find((entry) => entry.id === "alchemyCrystal");
+        if (baseDiamond) {
+          return ShopActions.calculateSellPrice(baseDiamond.price, getSellFactorForItem("alchemyCrystal"));
+        }
+      }
+      return ShopActions.calculateSellPrice(itemPrice, getSellFactorForItem(itemId));
+    }
+
+    function getItemRarityClass(itemId) {
+      const rarityByItemId = {
+        shield: "rarity-common",
+        boots: "rarity-uncommon",
+        luckCharm: "rarity-uncommon",
+        trapKit: "rarity-rare",
+        rerollStone: "rarity-rare",
+        lotteryTicket: "rarity-uncommon",
+        smallHealPotion: "rarity-common",
+        fakeCrystal: "rarity-epic",
+        adrenaline: "rarity-epic",
+        alchemyCrystal: "rarity-legendary"
+      };
+      return rarityByItemId[itemId] || "rarity-common";
+    }
+
     function renderFortuneBuyerSelect() {
       return renderContextPlayerSelect("fortuneTeller", TEXTS.emptySelect.fortuneTeller);
     }
 
     function buildInventorySlotsHtml(player, options = {}) {
-      const { includeUseActions = false, maxSlots = INVENTORY_SLOT_LIMIT } = options;
+      const { includeUseActions = false, maxSlots = INVENTORY_SLOT_LIMIT, sellPricesByItemId = null } = options;
+      const sellSignature = sellPricesByItemId
+        ? Object.keys(sellPricesByItemId).sort().map((key) => `${key}:${Number(sellPricesByItemId[key]) || 0}`).join(",")
+        : "";
       const cacheKey = [
         player.id,
         includeUseActions ? 1 : 0,
         maxSlots,
+        sellSignature,
         state.rolling ? 1 : 0,
         player.boots,
         player.shields,
         player.luckCharm,
         player.adrenaline,
+        player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
-        player.alchemyCrystal
+        player.lotteryTicket,
+        player.alchemyCrystal,
+        player.fakeCrystal
       ].join("|");
       const cached = inventorySlotsCache.get(cacheKey);
       if (cached) return cached;
@@ -1983,9 +2028,12 @@ function rafDebounceSyncScale() {
         { id: "shields", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")), icon: SHOP_ITEM_META.shield.icon, count: player.shields, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "shield")) },
         { id: "luckCharm", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "luckCharm")), icon: SHOP_ITEM_META.luckCharm.icon, count: player.luckCharm, usable: false, desc: t("items.luckCharm.desc") },
         { id: "adrenaline", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "adrenaline")), icon: SHOP_ITEM_META.adrenaline.icon, count: player.adrenaline, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "adrenaline")) },
+        { id: "smallHealPotion", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "smallHealPotion")), icon: SHOP_ITEM_META.smallHealPotion.icon, count: player.smallHealPotion, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "smallHealPotion")) },
         { id: "trapKit", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "trapKit")), icon: SHOP_ITEM_META.trapKit.icon, count: player.trapKit, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "trapKit")) },
         { id: "rerollStone", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "rerollStone")), icon: SHOP_ITEM_META.rerollStone.icon, count: player.rerollStone, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "rerollStone")) },
-        { id: "alchemyCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "alchemyCrystal")), icon: SHOP_ITEM_META.alchemyCrystal.icon, count: player.alchemyCrystal, usable: true, desc: t("items.alchemyCrystal.desc") }
+        { id: "lotteryTicket", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")), icon: SHOP_ITEM_META.lotteryTicket.icon, count: player.lotteryTicket, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")) },
+        { id: "alchemyCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "alchemyCrystal")), icon: SHOP_ITEM_META.alchemyCrystal.icon, count: player.alchemyCrystal, usable: false, desc: t("items.alchemyCrystal.desc") },
+        { id: "fakeCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")), icon: SHOP_ITEM_META.fakeCrystal.icon, count: player.fakeCrystal, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")) }
       ].filter((item) => item.count > 0);
 
       const slots = Array.from({ length: maxSlots }, (_, index) => itemDefs[index] || null);
@@ -1994,13 +2042,17 @@ function rafDebounceSyncScale() {
         // Prevent using boots if they are already active
         const canUse = includeUseActions && item.usable && !(item.id === "boots" && player.bootsActive);
         const disabledFlag = canUse && (state.rolling || (item.id === "boots" && player.bootsActive));
-        const slotClasses = `inv-slot occupied${canUse ? " usable" : ""}${disabledFlag ? " disabled" : ""}`;
+        const rarityClass = getItemRarityClass(item.id === "shields" ? "shield" : item.id);
+        const slotClasses = `inv-slot occupied ${rarityClass}${canUse ? " usable" : ""}${disabledFlag ? " disabled" : ""}`;
         const dataUse = canUse && !disabledFlag ? `data-use-item="${item.id}"` : "";
         const disabled = disabledFlag ? `data-disabled="true"` : "";
+        const sellPrice = Math.max(0, Number(sellPricesByItemId?.[item.id]) || 0);
+        const sellPriceHtml = sellPrice > 0 ? `<span class="slot-sell-price">+${formatGold(sellPrice)}</span>` : "";
         return `
           <div class="${slotClasses}" data-inv-item-id="${item.id}" ${dataUse} ${disabled}>
             <span class="item-icon">${item.icon}</span>
             <span class="slot-count">x${item.count}</span>
+            ${sellPriceHtml}
             <div class="item-tooltip"><b>${item.label}</b><br>${item.desc}</div>
           </div>
         `;
@@ -2021,9 +2073,12 @@ function rafDebounceSyncScale() {
         player.shields,
         player.luckCharm,
         player.adrenaline,
+        player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
-        player.alchemyCrystal
+        player.lotteryTicket,
+        player.alchemyCrystal,
+        player.fakeCrystal
       ];
       return counts.reduce((acc, count) => acc + (count > 0 ? 1 : 0), 0);
     }
@@ -2034,9 +2089,12 @@ function rafDebounceSyncScale() {
         shield: player.shields,
         luckCharm: player.luckCharm,
         adrenaline: player.adrenaline,
+        smallHealPotion: player.smallHealPotion,
         trapKit: player.trapKit,
         rerollStone: player.rerollStone,
-        alchemyCrystal: player.alchemyCrystal
+        lotteryTicket: player.lotteryTicket,
+        alchemyCrystal: player.alchemyCrystal,
+        fakeCrystal: player.fakeCrystal
       };
       const current = byId[itemId] ?? 0;
       if (current > 0) return true;
@@ -2084,9 +2142,12 @@ function rafDebounceSyncScale() {
         { prop: "shields", addKey: "shield", shopId: "shield" },
         { prop: "luckCharm", addKey: "luckCharm", shopId: "luckCharm" },
         { prop: "adrenaline", addKey: "adrenaline", shopId: "adrenaline" },
+        { prop: "smallHealPotion", addKey: "smallHealPotion", shopId: "smallHealPotion" },
         { prop: "trapKit", addKey: "trapKit", shopId: "trapKit" },
         { prop: "rerollStone", addKey: "rerollStone", shopId: "rerollStone" },
-        { prop: "alchemyCrystal", addKey: "alchemyCrystal", shopId: "alchemyCrystal" }
+        { prop: "lotteryTicket", addKey: "lotteryTicket", shopId: "lotteryTicket" },
+        { prop: "alchemyCrystal", addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
+        { prop: "fakeCrystal", addKey: "fakeCrystal", shopId: "fakeCrystal" }
       ];
       return defs
         .filter((item) => Math.max(0, Number(player[item.prop]) || 0) > 0)
@@ -2095,6 +2156,7 @@ function rafDebounceSyncScale() {
           return {
             prop: item.prop,
             addKey: item.addKey,
+            shopId: item.shopId,
             count: Math.max(0, Number(player[item.prop]) || 0),
             name: shopItem ? getShopItemName(shopItem) : item.prop,
             icon: SHOP_ITEM_META[item.shopId]?.icon || iconUnknown(),
@@ -2109,9 +2171,12 @@ function rafDebounceSyncScale() {
         shields: { addKey: "shield", shopId: "shield" },
         luckCharm: { addKey: "luckCharm", shopId: "luckCharm" },
         adrenaline: { addKey: "adrenaline", shopId: "adrenaline" },
+        smallHealPotion: { addKey: "smallHealPotion", shopId: "smallHealPotion" },
         trapKit: { addKey: "trapKit", shopId: "trapKit" },
         rerollStone: { addKey: "rerollStone", shopId: "rerollStone" },
-        alchemyCrystal: { addKey: "alchemyCrystal", shopId: "alchemyCrystal" }
+        lotteryTicket: { addKey: "lotteryTicket", shopId: "lotteryTicket" },
+        alchemyCrystal: { addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
+        fakeCrystal: { addKey: "fakeCrystal", shopId: "fakeCrystal" }
       };
       return transferDefs[itemProp] || null;
     }
@@ -2122,9 +2187,12 @@ function rafDebounceSyncScale() {
         shields: Number(player.shields) || 0,
         luckCharm: Number(player.luckCharm) || 0,
         adrenaline: Number(player.adrenaline) || 0,
+        smallHealPotion: Number(player.smallHealPotion) || 0,
         trapKit: Number(player.trapKit) || 0,
         rerollStone: Number(player.rerollStone) || 0,
-        alchemyCrystal: Number(player.alchemyCrystal) || 0
+        lotteryTicket: Number(player.lotteryTicket) || 0,
+        alchemyCrystal: Number(player.alchemyCrystal) || 0,
+        fakeCrystal: Number(player.fakeCrystal) || 0
       };
     }
 
@@ -2153,8 +2221,9 @@ function rafDebounceSyncScale() {
       return slots.map((item) => {
         if (!item) return `<div class="inv-slot trade-inv-slot empty">+</div>`;
         const isSelected = selectedSet.has(item.prop);
+        const rarityClass = getItemRarityClass(item.shopId || item.prop);
         return `
-          <div class="inv-slot occupied trade-inv-slot${isSelected ? " selected" : ""}" data-trade-select="${role}" data-trade-item="${item.prop}" data-trade-selected="${isSelected ? "true" : "false"}">
+          <div class="inv-slot occupied trade-inv-slot ${rarityClass}${isSelected ? " selected" : ""}" data-trade-select="${role}" data-trade-item="${item.prop}" data-trade-selected="${isSelected ? "true" : "false"}">
             <span class="item-icon">${item.icon}</span>
             <span class="slot-count">x${item.count}</span>
             <div class="item-tooltip"><b>${item.name}</b><br>${item.desc}</div>
@@ -2424,7 +2493,11 @@ function rafDebounceSyncScale() {
         <span id="shopBuyerHp" class="player-gold">${formatHp(player.hp)}</span>
         <span id="shopBuyerGold" class="player-gold">${formatGold(player.gold)}</span>
       `;
-      const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: false });
+      const sellPricesByItemId = SHOP_ITEMS.reduce((acc, item) => {
+        acc[item.id] = getSellPriceForItem(item.id, item.price);
+        return acc;
+      }, {});
+      const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: false, sellPricesByItemId });
       shopPlayerInventoryEl.innerHTML = slotsHtml;
     }
 
@@ -2684,9 +2757,12 @@ function rafDebounceSyncScale() {
         s: player.shields,
         l: player.luckCharm,
         ad: player.adrenaline,
+        shp: player.smallHealPotion,
         t: player.trapKit,
         r: player.rerollStone,
+        lt: player.lotteryTicket,
         a: player.alchemyCrystal,
+        fc: player.fakeCrystal,
         ba: player.bootsActive ? 1 : 0,
         fq: player.fortuneQuest || null,
         fi: player.finished ? 1 : 0,
@@ -2709,9 +2785,12 @@ function rafDebounceSyncScale() {
         shields: Number(raw.s) || 0,
         luckCharm: Number(raw.l) || 0,
         adrenaline: Number(raw.ad) || 0,
+        smallHealPotion: Number(raw.shp) || 0,
         trapKit: Number(raw.t) || 0,
         rerollStone: Number(raw.r) || 0,
+        lotteryTicket: Number(raw.lt) || 0,
         alchemyCrystal: Number(raw.a) || 0,
+        fakeCrystal: Number(raw.fc) || 0,
         bootsActive: Boolean(raw.ba),
         fortuneQuest: raw.fq && typeof raw.fq === "object" ? { ...raw.fq } : null,
         finished: Boolean(raw.fi),
@@ -2854,9 +2933,12 @@ function rafDebounceSyncScale() {
         shields: Math.max(0, Number(player.shields) || 0),
         luckCharm: Math.max(0, Number(player.luckCharm) || 0),
         adrenaline: Math.max(0, Number(player.adrenaline) || 0),
+        smallHealPotion: Math.max(0, Number(player.smallHealPotion) || 0),
         trapKit: Math.max(0, Number(player.trapKit) || 0),
         rerollStone: Math.max(0, Number(player.rerollStone) || 0),
+        lotteryTicket: Math.max(0, Number(player.lotteryTicket) || 0),
         alchemyCrystal: Math.max(0, Number(player.alchemyCrystal) || 0),
+        fakeCrystal: Math.max(0, Number(player.fakeCrystal) || 0),
         bootsActive: Boolean(player.bootsActive),
         fortuneQuest: player.fortuneQuest && typeof player.fortuneQuest === "object" ? { ...player.fortuneQuest } : null,
         finished: Boolean(player.finished),
@@ -3330,9 +3412,12 @@ function createBoard() {
         player.shields,
         player.luckCharm,
         player.adrenaline,
+        player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
+        player.lotteryTicket,
         player.alchemyCrystal,
+        player.fakeCrystal,
         player.bootsActive ? 1 : 0,
         player.fortuneQuest ? 1 : 0,
         state.rolling ? 1 : 0
@@ -3609,9 +3694,12 @@ function createBoard() {
         player.shields,
         player.luckCharm,
         player.adrenaline,
+        player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
+        player.lotteryTicket,
         player.alchemyCrystal,
+        player.fakeCrystal,
         player.bootsActive ? 1 : 0,
         player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : ""
       ].join("|");
@@ -3654,6 +3742,21 @@ function createBoard() {
         return;
       }
 
+      if (itemId === "smallHealPotion") {
+        if (player.smallHealPotion < 1) return;
+        const healAmount = 25;
+        const beforeHp = player.hp;
+        if (beforeHp >= player.maxHp) return;
+        pushHistory("Use item: Small healing potion");
+        player.smallHealPotion -= 1;
+        player.hp = clamp(player.hp + healAmount, 0, player.maxHp);
+        const restored = Math.max(0, player.hp - beforeHp);
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        logEvent(t("ui.smallHealPotionUsed", { name: player.name, restored, before: beforeHp, after: player.hp }));
+        queueRenderFromDirty({ autosave: true });
+        return;
+      }
+
       if (itemId === "trapKit") {
         if (player.trapKit < 1) return;
         const targetCell = clamp(Number(state.selectedCell) || 1, 1, LAST_CELL);
@@ -3680,13 +3783,14 @@ function createBoard() {
         return;
       }
 
-      if (itemId === "alchemyCrystal") {
-        if (player.alchemyCrystal < 1) return;
-        pushHistory("Use item: Blood shard");
-        player.alchemyCrystal -= 1;
-        player.gold += REWARDS.alchemyCrystalUseGold;
+      if (itemId === "lotteryTicket") {
+        if (player.lotteryTicket < 1) return;
+        const reward = randomInt(0, 100);
+        pushHistory("Use item: Lottery ticket");
+        player.lotteryTicket -= 1;
+        player.gold += reward;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-        logEvent(`${player.name} shatters a Blood shard and receives +${formatGold(REWARDS.alchemyCrystalUseGold)}.`);
+        logEvent(t("ui.lotteryTicketUsed", { name: player.name, gold: formatGold(reward) }));
         queueRenderFromDirty({ autosave: true });
         return;
       }
@@ -4881,16 +4985,19 @@ function createBoard() {
         shields: { shopId: "shield", prop: SHOP_ITEM_TO_PROP.shield },
         luckCharm: { shopId: "luckCharm", prop: SHOP_ITEM_TO_PROP.luckCharm },
         adrenaline: { shopId: "adrenaline", prop: SHOP_ITEM_TO_PROP.adrenaline },
+        smallHealPotion: { shopId: "smallHealPotion", prop: SHOP_ITEM_TO_PROP.smallHealPotion },
         trapKit: { shopId: "trapKit", prop: SHOP_ITEM_TO_PROP.trapKit },
         rerollStone: { shopId: "rerollStone", prop: SHOP_ITEM_TO_PROP.rerollStone },
-        alchemyCrystal: { shopId: "alchemyCrystal", prop: SHOP_ITEM_TO_PROP.alchemyCrystal }
+        lotteryTicket: { shopId: "lotteryTicket", prop: SHOP_ITEM_TO_PROP.lotteryTicket },
+        alchemyCrystal: { shopId: "alchemyCrystal", prop: SHOP_ITEM_TO_PROP.alchemyCrystal },
+        fakeCrystal: { shopId: "fakeCrystal", prop: SHOP_ITEM_TO_PROP.fakeCrystal }
       };
       const info = map[invItemId];
       if (!info) return;
 
       const item = SHOP_ITEMS.find((entry) => entry.id === info.shopId);
       if (!item) return;
-      const sellPrice = ShopActions.calculateSellPrice(item.price, SELL_FACTOR);
+      const sellPrice = getSellPriceForItem(item.id, item.price);
 
       if (slotEl) {
         UIEffects.pulseClass(slotEl, "sell-flash", 400);
@@ -4898,6 +5005,91 @@ function createBoard() {
       }
 
       pushHistory(`Sell at ${isShadowMarket ? "shadow market" : "shop"}: ${getShopItemName(item)}`);
+
+      if (!isShadowMarket && item.id === "fakeCrystal") {
+        // Fake diamond sale at a regular shop may trigger the same bad outcomes as at the Shadow market.
+        if ((player[info.prop] || 0) < 1) return;
+        state.rolling = true;
+        renderStats();
+        renderTurnManager();
+        refreshCurrentContextMenu(true);
+
+        player[info.prop] -= 1;
+
+        const successChance = Math.min(1, Math.max(0, Number(CHANCES.blackMarket?.profitMax ?? 0.45)));
+        const luckBonus = getLuckTalismanBonus(player);
+        const adjustedSuccessChance = Math.min(0.95, successChance + luckBonus);
+        const failSlice = (1 - adjustedSuccessChance) / 4;
+        const roll = Math.random();
+        let goldDelta = 0;
+
+        if (roll < adjustedSuccessChance) {
+          player.gold += sellPrice;
+          goldDelta = sellPrice;
+          logEvent(t("ui.blackMarketSellSuccess", { name: player.name, item: getShopItemName(item), gold: formatGold(sellPrice) }));
+        } else if (roll < adjustedSuccessChance + failSlice) {
+          logEvent(t("ui.blackMarketSellNoGold", { name: player.name, item: getShopItemName(item) }));
+        } else if (roll < adjustedSuccessChance + failSlice * 2) {
+          const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
+          const beforeHp = player.hp;
+          player.hp = clamp(player.hp - damage, 0, player.maxHp);
+          const hpEl = document.getElementById("shopBuyerHp");
+          UIEffects.popTextAtElement(hpEl, `-${damage}${iconHp()}`);
+          logEvent(t("ui.blackMarketSellHurt", { name: player.name, damage, before: beforeHp, after: player.hp }));
+          if (player.hp <= 0) {
+            if (eliminatePlayerFromGame(player, "health dropped to 0")) {
+              state.rolling = false;
+              queueRender({
+                players: true,
+                stats: true,
+                selectedTile: true,
+                refreshInventoryOverlay: true,
+                refreshContextMenu: true,
+                tokensFull: true
+              }, { autosave: true });
+              return;
+            }
+          }
+        } else if (roll < adjustedSuccessChance + failSlice * 3) {
+          const from = player.position;
+          let direction = Math.random() < 0.5 ? -1 : 1;
+          if (from <= 1) direction = 1;
+          if (from >= LAST_CELL) direction = -1;
+          const to = clamp(from + direction, 1, LAST_CELL);
+          logEvent(t("ui.blackMarketSellThrown", { name: player.name, from, to }));
+          hideTileContextMenu();
+          await movePlayerAnimated(player, to);
+          const resolved = await resolveCellEffects(player);
+          if (resolved.eliminated) {
+            state.rolling = false;
+            queueRender({
+              players: true,
+              stats: true,
+              selectedTile: true,
+              refreshInventoryOverlay: true,
+              refreshContextMenu: true,
+              tokensFull: true
+            }, { autosave: true });
+            return;
+          }
+        } else {
+          const extraLoss = Math.min(player.gold, Math.max(5, Math.round(item.price * 0.12)));
+          player.gold -= extraLoss;
+          goldDelta -= extraLoss;
+          logEvent(t("ui.blackMarketSellCheated", { name: player.name, loss: formatGold(extraLoss) }));
+        }
+
+        state.rolling = false;
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
+        if (goldDelta !== 0) {
+          setTimeout(() => {
+            const goldEl = document.getElementById("shopBuyerGold");
+            UIEffects.popGoldAtElement(goldEl, goldDelta);
+          }, 0);
+        }
+        return;
+      }
 
       if (!isShadowMarket) {
         const sell = ShopActions.sellItemState({
@@ -5646,4 +5838,3 @@ function createBoard() {
     }
 
     init();
-
