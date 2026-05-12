@@ -1897,6 +1897,13 @@
       width: 100%;
     }
 
+    .tutorial-mode-points {
+      margin: -4px 2px 2px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
     .tutorial-mode-grid button.tutorial-mode-complete {
       border-color: rgba(108, 199, 134, 0.75);
       background: linear-gradient(180deg, rgba(27, 74, 41, 0.94), rgba(18, 53, 31, 0.96));

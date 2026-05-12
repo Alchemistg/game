@@ -283,6 +283,7 @@ let perfSectionTimes = {};
     let deferredInstallPrompt = null;
     let tutorialManager = null;
     let activeTutorialMode = "";
+    let queuedTutorialMode = "";
     let tutorialFixedMapEnabled = false;
     let suppressTutorialAutostartOnce = false;
     let mainMenuScrollY = 0;
@@ -1267,6 +1268,18 @@ function formatLogEntry(entry) {
       }
     }
 
+    function clearTutorialStoredState() {
+      try {
+        window.localStorage.removeItem(TUTORIAL_PROGRESS_KEY);
+        window.localStorage.removeItem(TUTORIAL_SEEN_KEY);
+        window.localStorage.removeItem(TUTORIAL_CHAPTERS_KEY);
+        window.localStorage.removeItem(TUTORIAL_MODE_KEY);
+        window.localStorage.removeItem(TUTORIAL_FIXED_MAP_KEY);
+      } catch (_) {
+        // ignore
+      }
+    }
+
     function markTutorialChapterCompleted(mode) {
       const key = String(mode || "").trim();
       if (!key) return;
@@ -1282,20 +1295,28 @@ function formatLogEntry(entry) {
       buttonEl.setAttribute("data-completed", isDone ? "1" : "0");
     }
 
-    function syncTutorialModePicker() {
-      const progress = readTutorialChaptersProgress();
-      setTutorialChapterCompletedVisual(tutorialModeFullBtnEl, Boolean(progress.full));
-      setTutorialChapterCompletedVisual(tutorialModeCellsBtnEl, Boolean(progress.cells));
-      setTutorialChapterCompletedVisual(tutorialModeQuickBtnEl, Boolean(progress.quick));
+    function normalizeTutorialMode(mode) {
+      const value = String(mode || "").trim();
+      const legacyModeMap = { full: "basics", cells: "tiles", quick: "systems" };
+      if (value === "basics" || value === "tiles" || value === "systems") return value;
+      return legacyModeMap[value] || "";
     }
 
-    function startTutorialByMode(mode = "full") {
+    function syncTutorialModePicker() {
+      const progress = readTutorialChaptersProgress();
+      setTutorialChapterCompletedVisual(tutorialModeFullBtnEl, Boolean(progress.basics || progress.full));
+      setTutorialChapterCompletedVisual(tutorialModeCellsBtnEl, Boolean(progress.tiles || progress.cells));
+      setTutorialChapterCompletedVisual(tutorialModeQuickBtnEl, Boolean(progress.systems || progress.quick));
+    }
+
+    function startTutorialByMode(mode = "basics") {
       setTutorialModePickerOpen(false);
       setSettingsPanelOpen(false);
-      activeTutorialMode = String(mode || "full");
+      queuedTutorialMode = "";
+      activeTutorialMode = normalizeTutorialMode(mode) || "basics";
       setTutorialModePersisted(activeTutorialMode);
       setTutorialFixedMapEnabled(true);
-      if (activeTutorialMode === "cells") {
+      if (activeTutorialMode === "tiles" || activeTutorialMode === "systems") {
         startBlankRunInActiveSession();
       } else {
         buildCells();
@@ -1304,12 +1325,17 @@ function formatLogEntry(entry) {
       }
       if (!tutorialManager && window.TutorialManager) setupTutorial();
       window.TutorialManager?.reset();
-      if (activeTutorialMode === "cells") {
+      if (activeTutorialMode === "tiles" || activeTutorialMode === "systems") {
         setMainMenuOpen(false);
       } else {
         setMainMenuOpen(true);
       }
-      window.setTimeout(() => tutorialManager?.start({ force: true, mode }), 80);
+      window.setTimeout(async () => {
+        if ((activeTutorialMode === "tiles" || activeTutorialMode === "systems") && state.players.length === 0) {
+          await addPlayer("Ада");
+        }
+        tutorialManager?.start({ force: true, mode: activeTutorialMode });
+      }, 80);
     }
 
     function setActiveSession(sessionId) {
@@ -1586,7 +1612,7 @@ function formatLogEntry(entry) {
     }
 
     function setTutorialModePersisted(mode) {
-      const value = String(mode || "").trim();
+      const value = normalizeTutorialMode(mode);
       try {
         if (value) window.localStorage.setItem(TUTORIAL_MODE_KEY, value);
         else window.localStorage.removeItem(TUTORIAL_MODE_KEY);
@@ -1597,7 +1623,7 @@ function formatLogEntry(entry) {
 
     function getTutorialModePersisted() {
       try {
-        return String(window.localStorage.getItem(TUTORIAL_MODE_KEY) || "").trim();
+        return normalizeTutorialMode(window.localStorage.getItem(TUTORIAL_MODE_KEY) || "");
       } catch (_) {
         return "";
       }
@@ -4757,14 +4783,26 @@ function createBoard() {
       openContextMenu(targetMode, cellNumber);
     }
 
+    function focusSelectedPlayerCellForTutorial() {
+      const player = selectedPlayer();
+      if (!player) return;
+      state.selectedCell = clamp(Number(player.position) || 1, 1, LAST_CELL);
+      renderSelectedTile();
+    }
+
     function setupTutorial() {
       if (!window.TutorialManager) return;
       tutorialManager = new window.TutorialManager({
         api: {
+          queueNextTutorialMode: (mode) => {
+            queuedTutorialMode = normalizeTutorialMode(mode);
+          },
           openContextForSelectedPlayer: openTutorialContextForSelectedPlayer,
+          focusSelectedPlayerCell: focusSelectedPlayerCellForTutorial,
           closeContext: hideTileContextMenu,
           closeInventory: closeInventoryOverlay,
           prepareTutorialTradeScenario,
+          prepareTutorialSystemsScenario,
           setTutorialRollPlan,
           prepareTutorialRollTarget
         }
@@ -4799,6 +4837,50 @@ function createBoard() {
 
       if (owner.gold < 5) owner.gold = 5;
       if (partner.gold < 5) partner.gold = 5;
+      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id, partner.id] });
+    }
+
+    async function prepareTutorialSystemsScenario() {
+      if (!isTutorialActive()) return;
+
+      let owner = selectedPlayer() || state.players[0] || null;
+      if (!owner) {
+        await addPlayer("Ада");
+        owner = selectedPlayer() || state.players[0] || null;
+      }
+      if (!owner) return;
+
+      let partner = state.players.find((entry) => entry.id !== owner.id && !isPlayerFinished(entry));
+      if (!partner) {
+        await addPlayer("Лея");
+        partner = state.players.find((entry) => entry.id !== owner.id && !isPlayerFinished(entry));
+      }
+      if (!partner) return;
+
+      const targetCell = owner.position;
+      if (partner.position !== targetCell) {
+        const from = partner.position;
+        partner.position = targetCell;
+        markPlayerDirty(partner.id, {
+          row: true,
+          stats: true,
+          context: true,
+          inventoryOverlay: true,
+          posFrom: from,
+          posTo: targetCell
+        });
+      }
+
+      if (owner.gold < 20) owner.gold = 20;
+      if (partner.gold < 20) partner.gold = 20;
+
+      owner.cursedItemId = "boots";
+      owner.cursedItemTurns = Math.max(2, Number(owner.cursedItemTurns) || 0);
+      owner.tradeBlockedTurns = 0;
+      partner.tradeBlockedTurns = 0;
+
       markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id, partner.id] });
@@ -5244,19 +5326,23 @@ function createBoard() {
       const failSlice = (1 - adjustedSuccessChance) / 4;
       const roll = Math.random();
       let granted = false;
+      let shadowOutcome = "unknown";
 
       if (roll < adjustedSuccessChance) {
         player[playerProp] = (player[playerProp] || 0) + 1;
         granted = true;
+        shadowOutcome = "success";
         if (action === "alchemyCrystal") {
           player.gold += REWARDS.alchemyCrystalPurchaseBonusGold;
           animateContextGoldDelta(REWARDS.alchemyCrystalPurchaseBonusGold);
         }
         logEvent(t("ui.blackMarketBuySuccess", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
       } else if (roll < adjustedSuccessChance + failSlice) {
+        shadowOutcome = "noItem";
         logEvent(t("ui.blackMarketBuyNoItem", { name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
         hideTileContextMenu();
       } else if (roll < adjustedSuccessChance + failSlice * 2) {
+        shadowOutcome = "hurt";
         const damage = Math.min(10, Math.max(1, Math.round((player.maxHp || 100) * 0.05)));
         const beforeHp = player.hp;
         player.hp = clamp(player.hp - damage, 0, player.maxHp);
@@ -5265,6 +5351,7 @@ function createBoard() {
         logEvent(t("ui.blackMarketBuyHurt", { name: player.name, price: formatGold(item.price), damage, before: beforeHp, after: player.hp }));
         if (player.hp <= 0) {
           if (eliminatePlayerFromGame(player, "health dropped to 0")) {
+            emitGameEvent("black-market-buy-resolved", { playerId: player.id, itemId: action, outcome: shadowOutcome });
             state.rolling = false;
             queueRender({
               players: true,
@@ -5281,6 +5368,7 @@ function createBoard() {
         // Cheated: the deal goes through (item is granted), but the buyer loses extra gold.
         player[playerProp] = (player[playerProp] || 0) + 1;
         granted = true;
+        shadowOutcome = "cheated";
         if (action === "alchemyCrystal") {
           player.gold += REWARDS.alchemyCrystalPurchaseBonusGold;
           animateContextGoldDelta(REWARDS.alchemyCrystalPurchaseBonusGold);
@@ -5290,6 +5378,7 @@ function createBoard() {
         UIEffects.popGoldAtElement(goldEl, -extraLoss);
         logEvent(t("ui.blackMarketBuyCheated", { name: player.name, item: getShopItemName(item), price: formatGold(item.price), loss: formatGold(extraLoss) }));
       } else {
+        shadowOutcome = "thrown";
         const from = player.position;
         let direction = Math.random() < 0.5 ? -1 : 1;
         if (from <= 1) direction = 1;
@@ -5300,6 +5389,7 @@ function createBoard() {
         await movePlayerAnimated(player, to);
         const resolved = await resolveCellEffects(player);
         if (resolved.eliminated) {
+          emitGameEvent("black-market-buy-resolved", { playerId: player.id, itemId: action, outcome: shadowOutcome });
           state.rolling = false;
           queueRender({
             players: true,
@@ -5317,6 +5407,7 @@ function createBoard() {
       markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
       if (granted) emitGameEvent("item-bought", { playerId: player.id, itemId: action, market: "blackMarket" });
+      emitGameEvent("black-market-buy-resolved", { playerId: player.id, itemId: action, outcome: shadowOutcome });
 
       if (granted) {
         setTimeout(() => {
@@ -5837,13 +5928,13 @@ function createBoard() {
         tutorialModeCloseBtnEl.addEventListener("click", () => setTutorialModePickerOpen(false));
       }
       if (tutorialModeFullBtnEl) {
-        tutorialModeFullBtnEl.addEventListener("click", () => startTutorialByMode("full"));
+        tutorialModeFullBtnEl.addEventListener("click", () => startTutorialByMode("basics"));
       }
       if (tutorialModeCellsBtnEl) {
-        tutorialModeCellsBtnEl.addEventListener("click", () => startTutorialByMode("cells"));
+        tutorialModeCellsBtnEl.addEventListener("click", () => startTutorialByMode("tiles"));
       }
       if (tutorialModeQuickBtnEl) {
-        tutorialModeQuickBtnEl.addEventListener("click", () => startTutorialByMode("quick"));
+        tutorialModeQuickBtnEl.addEventListener("click", () => startTutorialByMode("systems"));
       }
       if (tutorialModePickerEl) {
         tutorialModePickerEl.addEventListener("click", (event) => {
@@ -5852,12 +5943,27 @@ function createBoard() {
       }
       document.addEventListener("tutorial:finished", (event) => {
         const skipped = Boolean(event?.detail?.skipped);
+        const completedMode = normalizeTutorialMode(activeTutorialMode);
+        const nextMode = skipped ? "" : normalizeTutorialMode(queuedTutorialMode);
         if (!skipped && activeTutorialMode) {
           markTutorialChapterCompleted(activeTutorialMode);
         }
         setTutorialModePersisted("");
         setTutorialFixedMapEnabled(false);
         activeTutorialMode = "";
+        queuedTutorialMode = "";
+        if (skipped) {
+          clearTutorialStoredState();
+          syncTutorialModePicker();
+          setMainMenuOpen(true);
+          return;
+        }
+        if (nextMode) {
+          window.setTimeout(() => startTutorialByMode(nextMode), 80);
+          return;
+        }
+        clearTutorialStoredState();
+        syncTutorialModePicker();
       });
       let moveToTileClickTimer = null;
       moveToTileBtnEl.addEventListener("click", () => {
@@ -6212,7 +6318,7 @@ function createBoard() {
       setMainMenuOpen(!shouldStartPendingNewGame);
       if (shouldResumeTutorial) {
         setTutorialFixedMapEnabled(true);
-        window.setTimeout(() => tutorialManager?.start({ mode: activeTutorialMode || "full" }), 120);
+        window.setTimeout(() => tutorialManager?.start({ mode: activeTutorialMode || "basics" }), 120);
       }
 
       if ("serviceWorker" in navigator) {

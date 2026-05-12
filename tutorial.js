@@ -64,7 +64,7 @@
       this.currentTarget = null;
       this.currentStep = null;
       this.skipRequested = false;
-      this.mode = "full";
+      this.mode = "basics";
       this.positionRafId = 0;
       this.boundResize = () => this.schedulePositionTip();
       this.boundScroll = () => this.schedulePositionTip();
@@ -86,10 +86,10 @@
       return this.active;
     }
 
-    start({ force = false, mode = "full" } = {}) {
+    start({ force = false, mode = "basics" } = {}) {
       if (this.active) return;
       if (!force && TutorialManager.wasSeen()) return;
-      this.mode = String(mode || "full");
+      this.mode = String(mode || "basics");
       this.steps = this.createSteps();
       this.index = force ? 0 : Math.max(0, Number(storageGet(PROGRESS_KEY, "0")) || 0);
       this.skipRequested = false;
@@ -291,8 +291,11 @@
     }
     createSteps() {
       const t = (path) => global.GAME_I18N ? global.GAME_I18N.t(path) : "";
+      const modeAliases = { full: "basics", cells: "tiles", quick: "systems" };
+      const currentMode = modeAliases[this.mode] || this.mode || "basics";
+      const nextMode = currentMode === "basics" ? "tiles" : (currentMode === "tiles" ? "systems" : "");
 
-      const fullSteps = [
+      const allSteps = [
         {
           _id: "tutorial.step1Title",
           title: t("tutorial.step1Title"),
@@ -369,12 +372,13 @@
           _id: "tutorial.shop.title",
           title: t("tutorial.shop.title"),
           body: t("tutorial.shop.body"),
-          target: "#board",
+          target: ".cell.selected",
           actionLabel: t("tutorial.shopAction"),
-          action: async () => {
-            this.api.openContextForSelectedPlayer?.("shop");
+          before: async () => {
+            this.api.focusSelectedPlayerCell?.();
             await waitFrame();
-          }
+          },
+          waitFor: () => waitForEvent("game:context-opened", (detail) => detail.mode === "shop")
         },
         {
           _id: "tutorial.buy.title",
@@ -400,13 +404,20 @@
           _id: "tutorial.blackMarketUse.title",
           title: t("tutorial.blackMarketUse.title"),
           body: t("tutorial.blackMarketUse.body"),
-          target: "#board",
+          target: ".cell.selected",
           actionLabel: t("tutorial.blackMarketUseAction"),
-          action: async () => {
-            this.api.openContextForSelectedPlayer?.("blackMarket");
+          before: async () => {
+            this.api.focusSelectedPlayerCell?.();
             await waitFrame();
           },
-          waitFor: () => waitForEvent("game:item-bought", (detail) => detail.market === "blackMarket")
+          waitFor: () => waitForEvent("game:context-opened", (detail) => detail.mode === "blackMarket")
+        },
+        {
+          _id: "tutorial.blackMarketBuy.title",
+          title: t("tutorial.blackMarketBuy.title"),
+          body: t("tutorial.blackMarketBuy.body"),
+          target: "#shopItemsList",
+          waitFor: () => waitForEvent("game:black-market-buy-resolved")
         },
         {
           _id: "tutorial.altarRoll.title",
@@ -425,12 +436,19 @@
           _id: "tutorial.altarUse.title",
           title: t("tutorial.altarUse.title"),
           body: t("tutorial.altarUse.body"),
-          target: "#board",
+          target: ".cell.selected",
           actionLabel: t("tutorial.altarUseAction"),
-          action: async () => {
-            this.api.openContextForSelectedPlayer?.("altar");
+          before: async () => {
+            this.api.focusSelectedPlayerCell?.();
             await waitFrame();
           },
+          waitFor: () => waitForEvent("game:context-opened", (detail) => detail.mode === "altar")
+        },
+        {
+          _id: "tutorial.altarDo.title",
+          title: t("tutorial.altarDo.title"),
+          body: t("tutorial.altarDo.body"),
+          target: "#altarActionBtn, #altarContextSection button",
           waitFor: () => waitForEvent("game:altar-used")
         },
         {
@@ -450,12 +468,19 @@
           _id: "tutorial.fortuneUse.title",
           title: t("tutorial.fortuneUse.title"),
           body: t("tutorial.fortuneUse.body"),
-          target: "#board",
+          target: ".cell.selected",
           actionLabel: t("tutorial.fortuneUseAction"),
-          action: async () => {
-            this.api.openContextForSelectedPlayer?.("fortuneTeller");
+          before: async () => {
+            this.api.focusSelectedPlayerCell?.();
             await waitFrame();
           },
+          waitFor: () => waitForEvent("game:context-opened", (detail) => detail.mode === "fortuneTeller")
+        },
+        {
+          _id: "tutorial.fortuneDo.title",
+          title: t("tutorial.fortuneDo.title"),
+          body: t("tutorial.fortuneDo.body"),
+          target: "#fortuneActionBtn, #fortuneContextSection button",
           waitFor: () => waitForEvent("game:fortune-used")
         },
         {
@@ -465,6 +490,7 @@
           target: ".token.active, .token",
           before: async () => {
             this.api.closeContext?.();
+            await this.api.prepareTutorialSystemsScenario?.();
             await waitFrame();
           },
           waitFor: () => waitForEvent("game:inventory-opened")
@@ -541,41 +567,56 @@
           title: t("tutorial.done.title"),
           body: t("tutorial.done.body"),
           target: "#gameTitle",
-          actionLabel: t("tutorial.doneAction")
+          actionLabel: nextMode ? t("ui.tutorialNextChapter") : t("tutorial.doneAction"),
+          action: async () => {
+            if (nextMode) this.api.queueNextTutorialMode?.(nextMode);
+          }
         }
       ];
 
-      if (this.mode === "cells") {
-        return fullSteps.filter((step) => ![
+      const chapterSteps = {
+        basics: [
           "tutorial.step1Title",
           "tutorial.step2Title",
           "tutorial.step3Title",
           "tutorial.step4Title",
+          "tutorial.playerName.title",
+          "tutorial.addPlayer.title",
+          "tutorial.roll.title",
+          "tutorial.shopRoll.title",
+          "tutorial.shop.title",
+          "tutorial.buy.title",
+          "tutorial.done.title"
+        ],
+        tiles: [
+          "tutorial.blackMarketRoll.title",
+          "tutorial.blackMarketUse.title",
+          "tutorial.blackMarketBuy.title",
+          "tutorial.altarRoll.title",
+          "tutorial.altarUse.title",
+          "tutorial.altarDo.title",
+          "tutorial.fortuneRoll.title",
+          "tutorial.fortuneUse.title",
+          "tutorial.fortuneDo.title",
+          "tutorial.finishRoll.title",
+          "tutorial.done.title"
+        ],
+        systems: [
           "tutorial.inventory.title",
           "tutorial.effects.title",
           "tutorial.tradeOpen.title",
           "tutorial.tradeMenu.title",
           "tutorial.tradeFunctions.title",
           "tutorial.keeper.title",
-          "tutorial.logs.title"
-        ].includes(step._id));
-      }
-
-      if (this.mode === "quick") {
-        return fullSteps.filter((step) => [
-          "tutorial.step1Title",
-          "tutorial.step2Title",
-          "tutorial.step4Title",
-          "tutorial.playerName.title",
-          "tutorial.addPlayer.title",
-          "tutorial.shopRoll.title",
-          "tutorial.shop.title",
-          "tutorial.buy.title",
+          "tutorial.logs.title",
           "tutorial.done.title"
-        ].includes(step._id));
-      }
+        ]
+      };
 
-      return fullSteps;
+      const legacyModeMap = { full: "basics", cells: "tiles", quick: "systems" };
+      const resolvedMode = chapterSteps[this.mode] ? this.mode : (legacyModeMap[this.mode] || "basics");
+      const allowed = new Set(chapterSteps[resolvedMode]);
+      return allSteps.filter((step) => allowed.has(step._id));
     }
   }
 
