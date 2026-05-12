@@ -103,7 +103,9 @@ CONFIG = window.GAME_CONFIG;
       rerollStone: "rerollStone",
       lotteryTicket: "lotteryTicket",
       alchemyCrystal: "alchemyCrystal",
-      fakeCrystal: "fakeCrystal"
+      fakeCrystal: "fakeCrystal",
+      fateChalice: "fateChalice",
+      cleansingIncense: "cleansingIncense"
     };
 const state = {
       players: [],
@@ -2065,6 +2067,8 @@ function rafDebounceSyncScale() {
         rerollStone: 0,
         alchemyCrystal: 0,
         fakeCrystal: 0,
+        fateChalice: 0,
+        cleansingIncense: 0,
         lotteryTicket: 0,
         bootsActive: false,
         tradeBlockedTurns: 0,
@@ -2087,7 +2091,7 @@ function rafDebounceSyncScale() {
     }
 
     function getAvailableInventoryItemIds(player) {
-      const ids = ["boots", "shields", "smallHealPotion", "trapKit", "rerollStone", "lotteryTicket", "alchemyCrystal", "fakeCrystal", "adrenaline", "luckCharm"];
+      const ids = ["boots", "shields", "smallHealPotion", "trapKit", "rerollStone", "lotteryTicket", "alchemyCrystal", "fakeCrystal", "fateChalice", "cleansingIncense", "adrenaline", "luckCharm"];
       return ids.filter((itemId) => getInventoryItemCountById(player, itemId) > 0);
     }
 
@@ -2240,6 +2244,8 @@ function rafDebounceSyncScale() {
         lotteryTicket: "rarity-uncommon",
         smallHealPotion: "rarity-common",
         fakeCrystal: "rarity-epic",
+        fateChalice: "rarity-rare",
+        cleansingIncense: "rarity-uncommon",
         adrenaline: "rarity-epic",
         alchemyCrystal: "rarity-legendary"
       };
@@ -2270,7 +2276,9 @@ function rafDebounceSyncScale() {
         player.rerollStone,
         player.lotteryTicket,
         player.alchemyCrystal,
-        player.fakeCrystal
+        player.fakeCrystal,
+        player.fateChalice,
+        player.cleansingIncense
         ,
         player.cursedItemId || "",
         player.cursedItemTurns || 0
@@ -2287,7 +2295,9 @@ function rafDebounceSyncScale() {
         { id: "rerollStone", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "rerollStone")), icon: SHOP_ITEM_META.rerollStone.icon, count: player.rerollStone, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "rerollStone")) },
         { id: "lotteryTicket", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")), icon: SHOP_ITEM_META.lotteryTicket.icon, count: player.lotteryTicket, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")) },
         { id: "alchemyCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "alchemyCrystal")), icon: SHOP_ITEM_META.alchemyCrystal.icon, count: player.alchemyCrystal, usable: false, desc: t("items.alchemyCrystal.desc") },
-        { id: "fakeCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")), icon: SHOP_ITEM_META.fakeCrystal.icon, count: player.fakeCrystal, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")) }
+        { id: "fakeCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")), icon: SHOP_ITEM_META.fakeCrystal.icon, count: player.fakeCrystal, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")) },
+        { id: "fateChalice", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fateChalice")), icon: SHOP_ITEM_META.fateChalice.icon, count: player.fateChalice, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fateChalice")) },
+        { id: "cleansingIncense", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "cleansingIncense")), icon: SHOP_ITEM_META.cleansingIncense.icon, count: player.cleansingIncense, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "cleansingIncense")) }
       ].filter((item) => item.count > 0);
 
       const slots = Array.from({ length: maxSlots }, (_, index) => itemDefs[index] || null);
@@ -2333,7 +2343,9 @@ function rafDebounceSyncScale() {
         player.rerollStone,
         player.lotteryTicket,
         player.alchemyCrystal,
-        player.fakeCrystal
+        player.fakeCrystal,
+        player.fateChalice,
+        player.cleansingIncense
       ];
       return counts.reduce((acc, count) => acc + (count > 0 ? 1 : 0), 0);
     }
@@ -2349,7 +2361,9 @@ function rafDebounceSyncScale() {
         rerollStone: player.rerollStone,
         lotteryTicket: player.lotteryTicket,
         alchemyCrystal: player.alchemyCrystal,
-        fakeCrystal: player.fakeCrystal
+        fakeCrystal: player.fakeCrystal,
+        fateChalice: player.fateChalice,
+        cleansingIncense: player.cleansingIncense
       };
       const current = byId[itemId] ?? 0;
       if (current > 0) return true;
@@ -2402,7 +2416,9 @@ function rafDebounceSyncScale() {
         { prop: "rerollStone", addKey: "rerollStone", shopId: "rerollStone" },
         { prop: "lotteryTicket", addKey: "lotteryTicket", shopId: "lotteryTicket" },
         { prop: "alchemyCrystal", addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
-        { prop: "fakeCrystal", addKey: "fakeCrystal", shopId: "fakeCrystal" }
+        { prop: "fakeCrystal", addKey: "fakeCrystal", shopId: "fakeCrystal" },
+        { prop: "fateChalice", addKey: "fateChalice", shopId: "fateChalice" },
+        { prop: "cleansingIncense", addKey: "cleansingIncense", shopId: "cleansingIncense" }
       ];
       return defs
         .filter((item) => Math.max(0, Number(player[item.prop]) || 0) > 0)
@@ -2431,7 +2447,9 @@ function rafDebounceSyncScale() {
         rerollStone: { addKey: "rerollStone", shopId: "rerollStone" },
         lotteryTicket: { addKey: "lotteryTicket", shopId: "lotteryTicket" },
         alchemyCrystal: { addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
-        fakeCrystal: { addKey: "fakeCrystal", shopId: "fakeCrystal" }
+        fakeCrystal: { addKey: "fakeCrystal", shopId: "fakeCrystal" },
+        fateChalice: { addKey: "fateChalice", shopId: "fateChalice" },
+        cleansingIncense: { addKey: "cleansingIncense", shopId: "cleansingIncense" }
       };
       return transferDefs[itemProp] || null;
     }
@@ -2447,7 +2465,9 @@ function rafDebounceSyncScale() {
         rerollStone: Number(player.rerollStone) || 0,
         lotteryTicket: Number(player.lotteryTicket) || 0,
         alchemyCrystal: Number(player.alchemyCrystal) || 0,
-        fakeCrystal: Number(player.fakeCrystal) || 0
+        fakeCrystal: Number(player.fakeCrystal) || 0,
+        fateChalice: Number(player.fateChalice) || 0,
+        cleansingIncense: Number(player.cleansingIncense) || 0
       };
     }
 
@@ -3006,6 +3026,8 @@ function rafDebounceSyncScale() {
         lt: player.lotteryTicket,
         a: player.alchemyCrystal,
         fc: player.fakeCrystal,
+        fch: player.fateChalice,
+        cin: player.cleansingIncense,
         ba: player.bootsActive ? 1 : 0,
         tb: Number(player.tradeBlockedTurns) || 0,
         ci: player.cursedItemId || "",
@@ -3037,6 +3059,8 @@ function rafDebounceSyncScale() {
         lotteryTicket: Number(raw.lt) || 0,
         alchemyCrystal: Number(raw.a) || 0,
         fakeCrystal: Number(raw.fc) || 0,
+        fateChalice: Number(raw.fch) || 0,
+        cleansingIncense: Number(raw.cin) || 0,
         bootsActive: Boolean(raw.ba),
         tradeBlockedTurns: Math.max(0, Number(raw.tb) || 0),
         cursedItemId: String(raw.ci || ""),
@@ -3188,6 +3212,8 @@ function rafDebounceSyncScale() {
         lotteryTicket: Math.max(0, Number(player.lotteryTicket) || 0),
         alchemyCrystal: Math.max(0, Number(player.alchemyCrystal) || 0),
         fakeCrystal: Math.max(0, Number(player.fakeCrystal) || 0),
+        fateChalice: Math.max(0, Number(player.fateChalice) || 0),
+        cleansingIncense: Math.max(0, Number(player.cleansingIncense) || 0),
         bootsActive: Boolean(player.bootsActive),
         tradeBlockedTurns: Math.max(0, Number(player.tradeBlockedTurns) || 0),
         cursedItemId: String(player.cursedItemId || ""),
@@ -3673,6 +3699,8 @@ function createBoard() {
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
+        player.fateChalice,
+        player.cleansingIncense,
         player.bootsActive ? 1 : 0,
         player.fortuneQuest ? 1 : 0,
         state.rolling ? 1 : 0
@@ -3959,6 +3987,8 @@ function createBoard() {
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
+        player.fateChalice,
+        player.cleansingIncense,
         player.bootsActive ? 1 : 0,
         player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : ""
       ].join("|");
@@ -4088,6 +4118,31 @@ function createBoard() {
         state.rolling = false;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
         queueRenderFromDirty({ autosave: true, selectedTile: true });
+        return;
+      }
+
+      if (itemId === "cleansingIncense") {
+        if (player.cleansingIncense < 1) return;
+        const removable = [];
+        if ((Number(player.tradeBlockedTurns) || 0) > 0) removable.push("tradeBlocked");
+        if ((Number(player.cursedItemTurns) || 0) > 0 && player.cursedItemId) removable.push("cursedItem");
+        if (player.fortuneQuest && String(player.fortuneQuest.omen || "").toLowerCase() === "bad") removable.push("badProphecy");
+        if (removable.length < 1) return;
+
+        const picked = removable[randomInt(0, removable.length - 1)];
+        pushHistory("Use item: Cleansing incense");
+        player.cleansingIncense -= 1;
+        if (picked === "tradeBlocked") {
+          player.tradeBlockedTurns = 0;
+        } else if (picked === "cursedItem") {
+          player.cursedItemTurns = 0;
+          player.cursedItemId = "";
+        } else if (picked === "badProphecy") {
+          player.fortuneQuest = null;
+        }
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        logEvent(`${player.name} uses Cleansing Incense and removes one negative effect.`);
+        queueRenderFromDirty({ autosave: true });
       }
     }
 
@@ -4338,7 +4393,11 @@ function createBoard() {
         player.adrenaline,
         player.trapKit,
         player.rerollStone,
+        player.lotteryTicket,
         player.alchemyCrystal,
+        player.fakeCrystal,
+        player.fateChalice,
+        player.cleansingIncense,
         player.bootsActive ? 1 : 0,
         player.tradeBlockedTurns || 0,
         player.cursedItemId || "",
@@ -4837,6 +4896,8 @@ function createBoard() {
 
       if (owner.gold < 5) owner.gold = 5;
       if (partner.gold < 5) partner.gold = 5;
+      partner.cleansingIncense = Math.max(1, Number(partner.cleansingIncense) || 0);
+      tradeTargetByPlayerId.set(owner.id, partner.id);
       markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id, partner.id] });
@@ -4880,6 +4941,8 @@ function createBoard() {
       owner.cursedItemTurns = Math.max(2, Number(owner.cursedItemTurns) || 0);
       owner.tradeBlockedTurns = 0;
       partner.tradeBlockedTurns = 0;
+      partner.cleansingIncense = Math.max(1, Number(partner.cleansingIncense) || 0);
+      tradeTargetByPlayerId.set(owner.id, partner.id);
 
       markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
@@ -5443,7 +5506,9 @@ function createBoard() {
         rerollStone: { shopId: "rerollStone", prop: SHOP_ITEM_TO_PROP.rerollStone },
         lotteryTicket: { shopId: "lotteryTicket", prop: SHOP_ITEM_TO_PROP.lotteryTicket },
         alchemyCrystal: { shopId: "alchemyCrystal", prop: SHOP_ITEM_TO_PROP.alchemyCrystal },
-        fakeCrystal: { shopId: "fakeCrystal", prop: SHOP_ITEM_TO_PROP.fakeCrystal }
+        fakeCrystal: { shopId: "fakeCrystal", prop: SHOP_ITEM_TO_PROP.fakeCrystal },
+        fateChalice: { shopId: "fateChalice", prop: SHOP_ITEM_TO_PROP.fateChalice },
+        cleansingIncense: { shopId: "cleansingIncense", prop: SHOP_ITEM_TO_PROP.cleansingIncense }
       };
       const info = map[invItemId];
       if (!info) return;

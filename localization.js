@@ -277,7 +277,9 @@
         rerollStone: { name: "Камень второго знака", desc: "Позволяет пройти новый знак: 1-6 клеток" },
         lotteryTicket: { name: "Лотерейный билет", desc: "При использовании приносит случайную награду от 0 до 100 золота" },
         alchemyCrystal: { name: "Алмаз", desc: "Дорогой товар, который выгодно продать." },
-        fakeCrystal: { name: "Поддельный алмаз", desc: "Продаётся по той же цене, что и алмаз." }
+        fakeCrystal: { name: "Поддельный алмаз", desc: "Продаётся по той же цене, что и алмаз." },
+        fateChalice: { name: "Чаша Перемен", desc: "Меняет навязанную судьбу на новую." },
+        cleansingIncense: { name: "Очищающий Ладан", desc: "Снимает один случайный негативный эффект." }
       },
       cellTypes: {
         trap: "Проклятие",
@@ -330,7 +332,7 @@
         tradeOpen: { title: "Обмен: открытие", body: "Для обучения рядом подготовлен второй игрок. Нажмите кнопку обмена (↔) в карточке активного игрока." },
         tradeOpenAction: "Открыть обмен",
         tradeMenu: { title: "Меню контракта", body: "В этом меню выбирается партнер, задается вклад каждой стороны (золото и предметы), и показываются текущие ресурсы обоих игроков." },
-        tradeFunctions: { title: "Функции обмена", body: "Выберите предметы в слотах, укажите сумму золота и нажмите «Скрепить контракт». Если обмен пустой или одинаковый с обеих сторон, кнопка будет неактивной." },
+        tradeFunctions: { title: "Функции обмена", body: "Для обучения передайте предмет «Очищающий Ладан» второму игроку. Выберите предмет в слотах, при необходимости укажите сумму золота и нажмите «Скрепить контракт»." },
         tradeFunctionsAction: "Скрепить контракт",
         keeper: { title: "Воля Хранителя", body: "Инструменты ведущего: выдать золото/предмет, изменить HP, телепортировать на клетку, откатить действие. Используйте аккуратно, это прямое управление партией." },
         logs: { title: "Хроники", body: "В хрониках фиксируются все ключевые события: броски, урон, покупки, сделки и эффекты. Используйте фильтры, чтобы быстро найти нужный момент." },
@@ -613,7 +615,9 @@
         rerollStone: { name: "Second sign stone", desc: "Lets you roll a new sign: 1-6 cells" },
         lotteryTicket: { name: "Lottery ticket", desc: "When used, grants a random reward from 0 to 100 gold" },
         alchemyCrystal: { name: "Diamond", desc: "Valuable trade good with high resale value." },
-        fakeCrystal: { name: "Counterfeit diamond", desc: "Sells for the same price as a diamond." }
+        fakeCrystal: { name: "Counterfeit diamond", desc: "Sells for the same price as a diamond." },
+        fateChalice: { name: "Chalice of Change", desc: "Rewrites imposed fate into a new one." },
+        cleansingIncense: { name: "Cleansing Incense", desc: "Removes one random negative effect." }
       },
       cellTypes: {
         trap: "Curse",
@@ -666,7 +670,7 @@
         tradeOpen: { title: "Trade: Open", body: "For this lesson, a second nearby player is prepared. Press the trade button (↔) on the active player's card." },
         tradeOpenAction: "Open Trade",
         tradeMenu: { title: "Contract Menu", body: "In this panel you pick a partner, configure what each side gives (gold and items), and see both players' current resources." },
-        tradeFunctions: { title: "Trade Functions", body: "Select item slots, enter gold amounts, then press \"Seal contract\". If the offer is empty or identical on both sides, the button stays disabled." },
+        tradeFunctions: { title: "Trade Functions", body: "For this lesson, transfer the item \"Cleansing Incense\" to the second player. Select the item in slots, add gold if needed, then press \"Seal contract\"." },
         tradeFunctionsAction: "Seal Contract",
         keeper: { title: "Keeper's Will", body: "Game Master tools: grant gold/items, adjust HP, teleport to a tile, or undo actions. Use carefully since these directly override normal flow." },
         logs: { title: "Chronicles", body: "Chronicles record all major events: rolls, damage, purchases, deals, and effects. Use filters to quickly inspect the moment you need." },
@@ -950,7 +954,9 @@
         rerollStone: { name: "Камінь другого знака", desc: "Дозволяє кинути новий знак: 1-6 клітинок" },
         lotteryTicket: { name: "Лотерейний квиток", desc: "При використанні дає випадкову нагороду від 0 до 100 золота" },
         alchemyCrystal: { name: "Алмаз", desc: "Дорогий товар, який вигідно продати." },
-        fakeCrystal: { name: "Підроблений алмаз", desc: "Підроблений алмаз продається за такою самою ціною, як і алмаз." }
+        fakeCrystal: { name: "Підроблений алмаз", desc: "Підроблений алмаз продається за такою самою ціною, як і алмаз." },
+        fateChalice: { name: "Чаша Змін", desc: "Змінює нав'язану долю на нову." },
+        cleansingIncense: { name: "Очищувальний Ладан", desc: "Знімає один випадковий негативний ефект." }
       },
       cellTypes: {
         trap: "Прокляття",
@@ -1003,7 +1009,7 @@
         tradeOpen: { title: "Обмін: відкриття", body: "Для навчання поруч створено другого гравця. Натисніть кнопку обміну (↔) у картці активного гравця." },
         tradeOpenAction: "Відкрити обмін",
         tradeMenu: { title: "Меню контракту", body: "У меню ви обираєте партнера, налаштовуєте що віддає кожен бік (золото та предмети), і бачите поточні ресурси обох гравців." },
-        tradeFunctions: { title: "Функції обміну", body: "Позначте предмети в слотах, задайте суму золота і натисніть «Скріпити контракт». Якщо обмін порожній або однаковий з обох боків, кнопка буде неактивною." },
+        tradeFunctions: { title: "Функції обміну", body: "Для навчання передайте предмет «Очищувальний Ладан» другому гравцю. Позначте предмет у слотах, за потреби задайте суму золота і натисніть «Скріпити контракт»." },
         tradeFunctionsAction: "Скріпити контракт",
         keeper: { title: "Воля Хранителя", body: "Інструменти ведучого: видати золото/предмет, змінити HP, телепортувати на клітинку, скасувати дію. Використовуйте обережно, це пряме втручання в партію." },
         logs: { title: "Хроніки", body: "У хроніках фіксуються ключові події: кидки, шкода, покупки, угоди та ефекти. Користуйтеся фільтрами, щоб швидко знайти потрібний момент." },

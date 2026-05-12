@@ -76,7 +76,9 @@
       { id: "rerollStone", nameKey: "items.rerollStone.name", descKey: "items.rerollStone.desc", price: 140 },
       { id: "lotteryTicket", nameKey: "items.lotteryTicket.name", descKey: "items.lotteryTicket.desc", price: 60 },
       { id: "alchemyCrystal", nameKey: "items.alchemyCrystal.name", descKey: "items.alchemyCrystal.desc", price: 220 },
-      { id: "fakeCrystal", nameKey: "items.fakeCrystal.name", descKey: "items.fakeCrystal.desc", price: 70 }
+      { id: "fakeCrystal", nameKey: "items.fakeCrystal.name", descKey: "items.fakeCrystal.desc", price: 70 },
+      { id: "fateChalice", nameKey: "items.fateChalice.name", descKey: "items.fateChalice.desc", price: 130 },
+      { id: "cleansingIncense", nameKey: "items.cleansingIncense.name", descKey: "items.cleansingIncense.desc", price: 110 }
     ],
 
     SHOP_ITEM_META: {
@@ -87,9 +89,11 @@
       trapKit: { icon: "🧰" },
       rerollStone: { icon: "🎲" },
       alchemyCrystal: { icon: "💎" },
-      smallHealPotion: { icon: "HP" },
-      lotteryTicket: { icon: "T" },
-      fakeCrystal: { icon: "F" }
+      smallHealPotion: { icon: "🍷" },
+      lotteryTicket: { icon: "🎟️" },
+      fakeCrystal: { icon: "💎" },
+      fateChalice: { icon: "🍷" },
+      cleansingIncense: { icon: "🕯️" }
     },
 
     CELL_TYPE_META: {

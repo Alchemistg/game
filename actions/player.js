@@ -28,6 +28,8 @@
       lotteryTicket: 0,
       alchemyCrystal: 0,
       fakeCrystal: 0,
+      fateChalice: 0,
+      cleansingIncense: 0,
       bootsActive: false,
       tradeBlockedTurns: 0,
       cursedItemId: "",
