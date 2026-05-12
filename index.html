@@ -144,6 +144,19 @@
       </div>
     </div>
   </section>
+  <section id="tutorialModePicker" class="session-picker is-hidden" aria-label="Выбор обучения" data-i18n-aria-label="ui.tutorialModeAriaLabel">
+    <div class="session-picker-inner" role="dialog" aria-modal="true">
+      <div class="session-picker-head">
+        <div class="session-picker-title" data-i18n="ui.tutorialModeTitle">Выбор обучения</div>
+        <button id="tutorialModeCloseBtn" class="modal-close-btn" type="button" aria-label="Закрыть" data-i18n-aria-label="ui.settingsClose">×</button>
+      </div>
+      <div class="tutorial-mode-grid">
+        <button id="tutorialModeFullBtn" class="primary" type="button" data-i18n="ui.tutorialModeFull">Полное обучение</button>
+        <button id="tutorialModeCellsBtn" type="button" data-i18n="ui.tutorialModeCells">Клетки и взаимодействия</button>
+        <button id="tutorialModeQuickBtn" type="button" data-i18n="ui.tutorialModeQuick">Быстрый старт</button>
+      </div>
+    </div>
+  </section>
   <div class="layout">
     <section class="board-panel">
       <h1 id="gameTitle" data-i18n="app.title">Катакомбы Культа</h1>
@@ -272,10 +285,6 @@
           <p id="fortuneText" class="fortune-copy" data-i18n="context.fortunePlaceholder">Знамение проявится после выбора носителя печати.</p>
           <div id="fortunePlayerMeta" class="shop-player-meta"></div> 
           <button id="fortuneActionBtn" class="primary" data-fortune-action="tell" data-i18n="context.fortuneAction">Принять знамение (25💰)</button>
-        </div>
-        <div id="blackMarketContextSection" class="tile-context-section">
-          <div id="blackMarketPlayerMeta" class="shop-player-meta"></div>
-          <button id="blackMarketActionBtn" class="primary" data-context-action="blackMarket">Заключить тёмный обмен (30💰)</button>
         </div>
         <div id="altarContextSection" class="tile-context-section">
           <div id="altarPlayerMeta" class="shop-player-meta"></div>

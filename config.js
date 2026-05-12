@@ -53,9 +53,9 @@
     },
 
     PHASE_BALANCE: [
-      { key: "early", until: 34, trapBack: 3, boostForward: 2, trapDamage: 20 },
-      { key: "mid", until: 69, trapBack: 5, boostForward: 3, trapDamage: 30 },
-      { key: "late", until: 100, trapBack: 7, boostForward: 4, trapDamage: 40 }
+      { key: "early", until: 34, trapBack: 3, trapDamage: 20 },
+      { key: "mid", until: 69, trapBack: 5, trapDamage: 30 },
+      { key: "late", until: 100, trapBack: 7, trapDamage: 40 }
     ],
 
     CELL_LAYOUT: {
@@ -94,7 +94,6 @@
 
     CELL_TYPE_META: {
       trap: { icon: "💀" },
-      boost: { icon: "✨" },
       shop: { icon: "💰" },
       blackMarket: { icon: "🕶️" },
       altar: { icon: "🛐" },
@@ -105,7 +104,6 @@
 
     CELL_TYPE_COLORS: {
       trap: "rgba(255, 68, 68, 0.24)",
-      boost: "rgba(68, 255, 68, 0.24)",
       shop: "rgba(217, 177, 76, 0.24)",
       blackMarket: "rgba(186, 98, 48, 0.28)",
       altar: "rgba(88, 120, 219, 0.28)",

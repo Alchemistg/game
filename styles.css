@@ -7,7 +7,6 @@
       --text: #efe4d1;
       --muted: #b7a58e;
       --player: #d1b46a;
-      --boost: #b13f56;
       --trap: #7c1826;
       --shop: #8f6b31;
       --finish: #caa866;
@@ -211,7 +210,6 @@
 
     .cell-normal { background: rgba(42, 27, 31, 0.85); }
     .cell-trap { background: rgba(124, 24, 38, 0.34); }
-    .cell-boost { background: rgba(177, 63, 86, 0.28); }
     .cell-shop { background: rgba(143, 107, 49, 0.3); }
     .cell-blackMarket { background: rgba(89, 42, 49, 0.34); }
     .cell-altar { background: rgba(101, 39, 57, 0.34); }
@@ -1890,6 +1888,22 @@
       width: 100%;
     }
 
+    .tutorial-mode-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .tutorial-mode-grid button {
+      width: 100%;
+    }
+
+    .tutorial-mode-grid button.tutorial-mode-complete {
+      border-color: rgba(108, 199, 134, 0.75);
+      background: linear-gradient(180deg, rgba(27, 74, 41, 0.94), rgba(18, 53, 31, 0.96));
+      color: #d8ffe3;
+      box-shadow: inset 0 0 0 1px rgba(157, 255, 186, 0.26);
+    }
+
     .main-menu {
       position: fixed;
       inset: 0;
@@ -2308,7 +2322,6 @@
 
     .dot-normal { background: #6d5055; }
     .dot-trap { background: #8d2234; }
-    .dot-boost { background: #b3485a; }
     .dot-shop { background: #9d7b40; }
     .dot-black-market { background: #6f343d; }
     .dot-altar { background: #7e3245; }

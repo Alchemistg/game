@@ -29,6 +29,9 @@
       alchemyCrystal: 0,
       fakeCrystal: 0,
       bootsActive: false,
+      tradeBlockedTurns: 0,
+      cursedItemId: "",
+      cursedItemTurns: 0,
       fortuneQuest: null,
       finished: false,
       finishOrder: 0

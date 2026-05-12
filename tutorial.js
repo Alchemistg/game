@@ -2,7 +2,7 @@
   "use strict";
 
   const SEEN_KEY = "alchemist_dungeon_tutorial_seen_v1";
-  const PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v1";
+  const PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v2";
   const ACTIVE_CLASS = "tutorial-active";
 
   function storageGet(key, fallback = "") {
@@ -62,9 +62,12 @@
       this.tipEl = null;
       this.highlightEl = null;
       this.currentTarget = null;
+      this.currentStep = null;
       this.skipRequested = false;
-      this.boundResize = () => this.positionTip();
-      this.boundScroll = () => this.positionTip();
+      this.mode = "full";
+      this.positionRafId = 0;
+      this.boundResize = () => this.schedulePositionTip();
+      this.boundScroll = () => this.schedulePositionTip();
       this.boundKeydown = (event) => {
         if (event.key === "Escape" && this.active) this.finish(true);
       };
@@ -83,9 +86,11 @@
       return this.active;
     }
 
-    start({ force = false } = {}) {
+    start({ force = false, mode = "full" } = {}) {
       if (this.active) return;
       if (!force && TutorialManager.wasSeen()) return;
+      this.mode = String(mode || "full");
+      this.steps = this.createSteps();
       this.index = force ? 0 : Math.max(0, Number(storageGet(PROGRESS_KEY, "0")) || 0);
       this.skipRequested = false;
       this.active = true;
@@ -122,6 +127,10 @@
       this.clearHighlight();
       this.tipEl?.remove();
       this.tipEl = null;
+      if (this.positionRafId) {
+        window.cancelAnimationFrame(this.positionRafId);
+        this.positionRafId = 0;
+      }
       document.body.classList.remove(ACTIVE_CLASS);
       window.removeEventListener("resize", this.boundResize);
       window.removeEventListener("scroll", this.boundScroll, true);
@@ -157,6 +166,14 @@
       this.highlightEl = null;
     }
 
+    schedulePositionTip() {
+      if (this.positionRafId) return;
+      this.positionRafId = window.requestAnimationFrame(() => {
+        this.positionRafId = 0;
+        this.positionTip();
+      });
+    }
+
     setHighlight(target) {
       this.clearHighlight();
       if (!target) return;
@@ -170,7 +187,15 @@
 
     positionTip() {
       if (!this.tipEl) return;
-      const target = this.currentTarget;
+      let target = this.currentTarget;
+      if (target && !target.isConnected) {
+        const nextTarget = this.getTarget(this.currentStep?.target);
+        if (nextTarget && nextTarget !== target) {
+          this.setHighlight(nextTarget);
+          return;
+        }
+        target = null;
+      }
       const margin = 12;
       const vw = document.documentElement.clientWidth;
       const vh = document.documentElement.clientHeight;
@@ -210,6 +235,7 @@
     }
 
     renderStep(step, target) {
+      this.currentStep = step;
       const progress = `${Math.min(this.index + 1, this.steps.length)} / ${this.steps.length}`;
       const actionLabel = step.actionLabel || (global.GAME_I18N ? global.GAME_I18N.t("ui.tutorialNext") : "Далее");
       this.tipEl.innerHTML = `
@@ -226,7 +252,7 @@
         this.skipRequested = true;
         this.finish(true);
       }, { once: true });
-      window.setTimeout(() => this.positionTip(), 0);
+      window.setTimeout(() => this.schedulePositionTip(), 0);
     }
 
     async showStep(step) {
@@ -239,7 +265,18 @@
       this.renderStep(step, target);
 
       if (step.waitFor) {
-        this.tipEl.querySelector(".tutorial-next").disabled = true;
+        const nextBtn = this.tipEl.querySelector(".tutorial-next");
+        if (step.action) {
+          await new Promise((resolve) => {
+            nextBtn.addEventListener("click", async () => {
+              nextBtn.disabled = true;
+              await step.action();
+              resolve();
+            }, { once: true });
+          });
+        } else {
+          nextBtn.disabled = true;
+        }
         await step.waitFor();
         return;
       }
@@ -255,30 +292,35 @@
     createSteps() {
       const t = (path) => global.GAME_I18N ? global.GAME_I18N.t(path) : "";
 
-      return [
+      const fullSteps = [
         {
+          _id: "tutorial.step1Title",
           title: t("tutorial.step1Title"),
           body: t("tutorial.step1Body"),
           target: "#newGameBtn",
           waitFor: () => waitForEvent("game:new-game-menu-opened")
         },
         {
+          _id: "tutorial.step2Title",
           title: t("tutorial.step2Title"),
           body: t("tutorial.step2Body"),
           target: "#newGameNameInput"
         },
         {
+          _id: "tutorial.step3Title",
           title: t("tutorial.step3Title"),
           body: t("tutorial.step3Body"),
           target: "#configBoardSize"
         },
         {
+          _id: "tutorial.step4Title",
           title: t("tutorial.step4Title"),
           body: t("tutorial.step4Body"),
           target: "#newGameStartBtn",
           waitFor: () => waitForEvent("game:new-game-started")
         },
         {
+          _id: "tutorial.playerName.title",
           title: t("tutorial.playerName.title"),
           body: t("tutorial.playerName.body"),
           target: "#playerName",
@@ -293,23 +335,38 @@
           }
         },
         {
+          _id: "tutorial.addPlayer.title",
           title: t("tutorial.addPlayer.title"),
           body: t("tutorial.addPlayer.body"),
           target: "#addPlayerBtn",
           waitFor: () => waitForEvent("game:player-added")
         },
         {
+          _id: "tutorial.roll.title",
           title: t("tutorial.roll.title"),
           body: t("tutorial.roll.body"),
           target: "#rollBtn",
-          waitFor: () => waitForEvent("game:roll-finished")
+          before: async () => {
+            this.api.prepareTutorialRollTarget?.("trap");
+            this.api.setTutorialRollPlan?.(["trap"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "trap")
         },
         {
-          title: t("tutorial.board.title"),
-          body: t("tutorial.board.body"),
-          target: ".board-wrap"
+          _id: "tutorial.shopRoll.title",
+          title: t("tutorial.shopRoll.title"),
+          body: t("tutorial.shopRoll.body"),
+          target: "#rollBtn",
+          before: async () => {
+            this.api.prepareTutorialRollTarget?.("shop");
+            this.api.setTutorialRollPlan?.(["shop"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "shop")
         },
         {
+          _id: "tutorial.shop.title",
           title: t("tutorial.shop.title"),
           body: t("tutorial.shop.body"),
           target: "#board",
@@ -320,12 +377,89 @@
           }
         },
         {
+          _id: "tutorial.buy.title",
           title: t("tutorial.buy.title"),
           body: t("tutorial.buy.body"),
           target: "#shopItemsList",
-          waitFor: () => waitForEvent("game:item-bought")
+          waitFor: () => waitForEvent("game:item-bought", (detail) => detail.market === "shop")
         },
         {
+          _id: "tutorial.blackMarketRoll.title",
+          title: t("tutorial.blackMarketRoll.title"),
+          body: t("tutorial.blackMarketRoll.body"),
+          target: "#rollBtn",
+          before: async () => {
+            this.api.closeContext?.();
+            this.api.prepareTutorialRollTarget?.("blackMarket");
+            this.api.setTutorialRollPlan?.(["blackMarket"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "blackMarket")
+        },
+        {
+          _id: "tutorial.blackMarketUse.title",
+          title: t("tutorial.blackMarketUse.title"),
+          body: t("tutorial.blackMarketUse.body"),
+          target: "#board",
+          actionLabel: t("tutorial.blackMarketUseAction"),
+          action: async () => {
+            this.api.openContextForSelectedPlayer?.("blackMarket");
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:item-bought", (detail) => detail.market === "blackMarket")
+        },
+        {
+          _id: "tutorial.altarRoll.title",
+          title: t("tutorial.altarRoll.title"),
+          body: t("tutorial.altarRoll.body"),
+          target: "#rollBtn",
+          before: async () => {
+            this.api.closeContext?.();
+            this.api.prepareTutorialRollTarget?.("altar");
+            this.api.setTutorialRollPlan?.(["altar"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "altar")
+        },
+        {
+          _id: "tutorial.altarUse.title",
+          title: t("tutorial.altarUse.title"),
+          body: t("tutorial.altarUse.body"),
+          target: "#board",
+          actionLabel: t("tutorial.altarUseAction"),
+          action: async () => {
+            this.api.openContextForSelectedPlayer?.("altar");
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:altar-used")
+        },
+        {
+          _id: "tutorial.fortuneRoll.title",
+          title: t("tutorial.fortuneRoll.title"),
+          body: t("tutorial.fortuneRoll.body"),
+          target: "#rollBtn",
+          before: async () => {
+            this.api.closeContext?.();
+            this.api.prepareTutorialRollTarget?.("fortuneTeller");
+            this.api.setTutorialRollPlan?.(["fortuneTeller"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "fortuneTeller")
+        },
+        {
+          _id: "tutorial.fortuneUse.title",
+          title: t("tutorial.fortuneUse.title"),
+          body: t("tutorial.fortuneUse.body"),
+          target: "#board",
+          actionLabel: t("tutorial.fortuneUseAction"),
+          action: async () => {
+            this.api.openContextForSelectedPlayer?.("fortuneTeller");
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:fortune-used")
+        },
+        {
+          _id: "tutorial.inventory.title",
           title: t("tutorial.inventory.title"),
           body: t("tutorial.inventory.body"),
           target: ".token.active, .token",
@@ -336,27 +470,51 @@
           waitFor: () => waitForEvent("game:inventory-opened")
         },
         {
+          _id: "tutorial.effects.title",
           title: t("tutorial.effects.title"),
           body: t("tutorial.effects.body"),
           target: ".effects-panel, .effects-title, .inventory-modal .inventory-body",
           scroll: false
         },
         {
-          title: t("tutorial.trade.title"),
-          body: t("tutorial.trade.body"),
-          target: ".trade-open-btn, #tradeOverlay .trade-panel, .trade-modal",
-          actionLabel: t("tutorial.tradeAction"),
-          action: async () => {
+          _id: "tutorial.tradeOpen.title",
+          title: t("tutorial.tradeOpen.title"),
+          body: t("tutorial.tradeOpen.body"),
+          target: ".trade-open-btn",
+          actionLabel: t("tutorial.tradeOpenAction"),
+          before: async () => {
             this.api.closeInventory?.();
+            await this.api.prepareTutorialTradeScenario?.();
             await waitFrame();
-          }
+          },
+          waitFor: () => waitForEvent("game:trade-opened")
         },
         {
+          _id: "tutorial.tradeMenu.title",
+          title: t("tutorial.tradeMenu.title"),
+          body: t("tutorial.tradeMenu.body"),
+          target: "#tradeOverlay .trade-panel, .trade-modal",
+          scroll: false
+        },
+        {
+          _id: "tutorial.tradeFunctions.title",
+          title: t("tutorial.tradeFunctions.title"),
+          body: t("tutorial.tradeFunctions.body"),
+          target: "#tradeOverlay .trade-panel, .trade-modal",
+          actionLabel: t("tutorial.tradeFunctionsAction"),
+          action: async () => {
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:trade-sealed")
+        },
+        {
+          _id: "tutorial.keeper.title",
           title: t("tutorial.keeper.title"),
           body: t("tutorial.keeper.body"),
           target: ".tools-grid"
         },
         {
+          _id: "tutorial.logs.title",
           title: t("tutorial.logs.title"),
           body: t("tutorial.logs.body"),
           target: "#eventJournalLauncher",
@@ -367,12 +525,57 @@
           waitFor: () => waitForEvent("game:logs-opened")
         },
         {
+          _id: "tutorial.finishRoll.title",
+          title: t("tutorial.finishRoll.title"),
+          body: t("tutorial.finishRoll.body"),
+          target: "#rollBtn",
+          before: async () => {
+            this.api.prepareTutorialRollTarget?.("finish");
+            this.api.setTutorialRollPlan?.(["finish"]);
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:cell-interacted", (detail) => detail.cellType === "finish")
+        },
+        {
+          _id: "tutorial.done.title",
           title: t("tutorial.done.title"),
           body: t("tutorial.done.body"),
           target: "#gameTitle",
           actionLabel: t("tutorial.doneAction")
         }
       ];
+
+      if (this.mode === "cells") {
+        return fullSteps.filter((step) => ![
+          "tutorial.step1Title",
+          "tutorial.step2Title",
+          "tutorial.step3Title",
+          "tutorial.step4Title",
+          "tutorial.inventory.title",
+          "tutorial.effects.title",
+          "tutorial.tradeOpen.title",
+          "tutorial.tradeMenu.title",
+          "tutorial.tradeFunctions.title",
+          "tutorial.keeper.title",
+          "tutorial.logs.title"
+        ].includes(step._id));
+      }
+
+      if (this.mode === "quick") {
+        return fullSteps.filter((step) => [
+          "tutorial.step1Title",
+          "tutorial.step2Title",
+          "tutorial.step4Title",
+          "tutorial.playerName.title",
+          "tutorial.addPlayer.title",
+          "tutorial.shopRoll.title",
+          "tutorial.shop.title",
+          "tutorial.buy.title",
+          "tutorial.done.title"
+        ].includes(step._id));
+      }
+
+      return fullSteps;
     }
   }
 

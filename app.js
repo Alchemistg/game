@@ -1,11 +1,14 @@
-﻿﻿let CONFIG = window.GAME_CONFIG;
+let CONFIG = window.GAME_CONFIG;
 const CONFIG_OVERRIDES_STORAGE_KEY = "alchemist_dungeon_config_overrides_v1";
 const PENDING_NEW_GAME_KEY = "alchemist_dungeon_pending_new_game_v1";
 const SAVE_PLAYERS_OPTION_KEY = "alchemist_dungeon_save_players_v1";
 const PENDING_NEW_GAME_PLAYERS_KEY = "alchemist_dungeon_pending_new_game_players_v1";
 const PENDING_NEW_GAME_NAME_KEY = "alchemist_dungeon_pending_new_game_name_v1";
-const TUTORIAL_PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v1";
+const TUTORIAL_PROGRESS_KEY = "alchemist_dungeon_tutorial_step_v2";
 const TUTORIAL_SEEN_KEY = "alchemist_dungeon_tutorial_seen_v1";
+const TUTORIAL_CHAPTERS_KEY = "alchemist_dungeon_tutorial_chapters_v1";
+const TUTORIAL_MODE_KEY = "alchemist_dungeon_tutorial_mode_v1";
+const TUTORIAL_FIXED_MAP_KEY = "alchemist_dungeon_tutorial_fixed_map_v1";
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -198,6 +201,11 @@ const state = {
     const sessionPickerLoadBtnEl = getEl('sessionPickerLoadBtn');
     const sessionPickerRenameBtnEl = getEl('sessionPickerRenameBtn');
     const sessionPickerDeleteBtnEl = getEl('sessionPickerDeleteBtn');
+    const tutorialModePickerEl = getEl('tutorialModePicker');
+    const tutorialModeCloseBtnEl = getEl('tutorialModeCloseBtn');
+    const tutorialModeFullBtnEl = getEl('tutorialModeFullBtn');
+    const tutorialModeCellsBtnEl = getEl('tutorialModeCellsBtn');
+    const tutorialModeQuickBtnEl = getEl('tutorialModeQuickBtn');
     const activePlayerCardEl = getEl('activePlayerCard');
     const playerStatsEl = getEl('playerStats');
     const rollBtnEl = getEl('rollBtn');
@@ -225,9 +233,6 @@ const state = {
     const fortuneTextEl = getEl('fortuneText');
     const fortunePlayerMetaEl = getEl('fortunePlayerMeta');
     const fortuneActionBtnEl = getEl('fortuneActionBtn');
-    const blackMarketContextSectionEl = getEl('blackMarketContextSection');
-    const blackMarketPlayerMetaEl = getEl('blackMarketPlayerMeta');
-    const blackMarketActionBtnEl = getEl('blackMarketActionBtn');
     const altarContextSectionEl = getEl('altarContextSection');
     const altarPlayerMetaEl = getEl('altarPlayerMeta');
     const altarActionBtnEl = getEl('altarActionBtn');
@@ -258,6 +263,7 @@ let perfSectionTimes = {};
     let tokenElsById = new Map();
     let lastActiveTokenId = "";
     let renderFrameId = null;
+    let tutorialRollPlan = [];
     let pendingRenderFlags = {
       players: false,
       stats: false,
@@ -276,6 +282,8 @@ let perfSectionTimes = {};
     let lastInventorySignature = "";
     let deferredInstallPrompt = null;
     let tutorialManager = null;
+    let activeTutorialMode = "";
+    let tutorialFixedMapEnabled = false;
     let suppressTutorialAutostartOnce = false;
     let mainMenuScrollY = 0;
     const SESSIONS_INDEX_KEY = "alchemist_dungeon_sessions_v1";
@@ -1056,6 +1064,7 @@ function formatLogEntry(entry) {
       }
       if (isOpen) setNewGameSetupOpen(false);
       if (isOpen) syncSettingsTab();
+      if (isOpen) emitGameEvent("settings-opened");
     }
 
     function safeJsonParse(raw, fallback = null) {
@@ -1222,11 +1231,85 @@ function formatLogEntry(entry) {
       if (isOpen) {
         syncSessionPickerSelect();
         sessionPickerSelectEl?.focus();
+        emitGameEvent("session-picker-opened");
       }
     }
 
     function openSessionPicker() {
       setSessionPickerOpen(true);
+    }
+
+    function setTutorialModePickerOpen(isOpen) {
+      if (!tutorialModePickerEl) return;
+      tutorialModePickerEl.classList.toggle("is-hidden", !isOpen);
+      if (isOpen) {
+        syncTutorialModePicker();
+        tutorialModeFullBtnEl?.focus();
+      }
+    }
+
+    function readTutorialChaptersProgress() {
+      try {
+        const raw = window.localStorage.getItem(TUTORIAL_CHAPTERS_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeTutorialChaptersProgress(progress) {
+      try {
+        window.localStorage.setItem(TUTORIAL_CHAPTERS_KEY, JSON.stringify(progress || {}));
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    function markTutorialChapterCompleted(mode) {
+      const key = String(mode || "").trim();
+      if (!key) return;
+      const progress = readTutorialChaptersProgress();
+      progress[key] = true;
+      writeTutorialChaptersProgress(progress);
+      syncTutorialModePicker();
+    }
+
+    function setTutorialChapterCompletedVisual(buttonEl, isDone) {
+      if (!buttonEl) return;
+      buttonEl.classList.toggle("tutorial-mode-complete", Boolean(isDone));
+      buttonEl.setAttribute("data-completed", isDone ? "1" : "0");
+    }
+
+    function syncTutorialModePicker() {
+      const progress = readTutorialChaptersProgress();
+      setTutorialChapterCompletedVisual(tutorialModeFullBtnEl, Boolean(progress.full));
+      setTutorialChapterCompletedVisual(tutorialModeCellsBtnEl, Boolean(progress.cells));
+      setTutorialChapterCompletedVisual(tutorialModeQuickBtnEl, Boolean(progress.quick));
+    }
+
+    function startTutorialByMode(mode = "full") {
+      setTutorialModePickerOpen(false);
+      setSettingsPanelOpen(false);
+      activeTutorialMode = String(mode || "full");
+      setTutorialModePersisted(activeTutorialMode);
+      setTutorialFixedMapEnabled(true);
+      if (activeTutorialMode === "cells") {
+        startBlankRunInActiveSession();
+      } else {
+        buildCells();
+        createBoard();
+        fullRender(false);
+      }
+      if (!tutorialManager && window.TutorialManager) setupTutorial();
+      window.TutorialManager?.reset();
+      if (activeTutorialMode === "cells") {
+        setMainMenuOpen(false);
+      } else {
+        setMainMenuOpen(true);
+      }
+      window.setTimeout(() => tutorialManager?.start({ force: true, mode }), 80);
     }
 
     function setActiveSession(sessionId) {
@@ -1421,6 +1504,7 @@ function formatLogEntry(entry) {
       if (isOpen) lockScrollForMainMenu();
       else unlockScrollForMainMenu();
       syncMainMenu();
+      if (isOpen) emitGameEvent("main-menu-opened");
     }
 
     function syncMainMenu() {
@@ -1452,12 +1536,118 @@ function formatLogEntry(entry) {
       }
     }
 
+    function prepareTutorialRollTarget(cellType) {
+      const player = selectedPlayer();
+      if (!player || !isTutorialActive()) return false;
+      const target = getFirstCellWithType(cellType);
+      if (!target) return false;
+      const directDistance = target - player.position;
+      if (directDistance >= 1 && directDistance <= 6) {
+        return true;
+      }
+      const from = player.position;
+      const pendingRollBonus = player.bootsActive && player.boots > 0 ? 2 : 0;
+      const anchor = clamp(target - (3 + pendingRollBonus), 1, LAST_CELL - 1);
+      if (from !== anchor) {
+        player.position = anchor;
+        markPlayerDirty(player.id, {
+          row: true,
+          stats: true,
+          context: true,
+          inventoryOverlay: true,
+          posFrom: from,
+          posTo: anchor
+        });
+        state.selectedCell = anchor;
+        queueRenderFromDirty({ autosave: false, selectedTile: true, tokenActiveIds: [player.id] });
+      }
+      return true;
+    }
+
+    function getTutorialFixedCellLayout() {
+      return {
+        trap: [4],
+        shop: [8],
+        blackMarket: [12],
+        altar: [16],
+        fortuneTeller: [20],
+        finish: [24]
+      };
+    }
+
+    function setTutorialFixedMapEnabled(enabled) {
+      tutorialFixedMapEnabled = Boolean(enabled);
+      try {
+        if (tutorialFixedMapEnabled) window.localStorage.setItem(TUTORIAL_FIXED_MAP_KEY, "1");
+        else window.localStorage.removeItem(TUTORIAL_FIXED_MAP_KEY);
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    function setTutorialModePersisted(mode) {
+      const value = String(mode || "").trim();
+      try {
+        if (value) window.localStorage.setItem(TUTORIAL_MODE_KEY, value);
+        else window.localStorage.removeItem(TUTORIAL_MODE_KEY);
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    function getTutorialModePersisted() {
+      try {
+        return String(window.localStorage.getItem(TUTORIAL_MODE_KEY) || "").trim();
+      } catch (_) {
+        return "";
+      }
+    }
+
     function getTutorialForcedRoll(player) {
-      if (!player || !isTutorialActive() || player.position !== 1) return 0;
-      const shopCell = (CELL_LAYOUT.shop || []).find((cellNumber) => cellNumber > 1 && cellNumber <= 7);
-      const target = shopCell || getFirstCellWithType("shop");
+      if (!player || !isTutorialActive()) return 0;
+      const pendingRollBonus = player.bootsActive && player.boots > 0 ? 2 : 0;
+      const nextGuidePoint = tutorialRollPlan[0];
+      if (typeof nextGuidePoint === "number" && nextGuidePoint >= 1 && nextGuidePoint <= 6) {
+        tutorialRollPlan.shift();
+        return nextGuidePoint;
+      }
+      let target = 0;
+      if (nextGuidePoint) {
+        target = getFirstCellWithType(nextGuidePoint);
+      } else if (player.position === 1) {
+        const shopCell = (CELL_LAYOUT.shop || []).find((cellNumber) => cellNumber > 1 && cellNumber <= 7);
+        target = shopCell || getFirstCellWithType("shop");
+      }
+      if (!target) return 0;
       const distance = target - player.position;
-      return distance >= 1 && distance <= 6 ? distance : 0;
+      const adjustedDice = distance - pendingRollBonus;
+      if (adjustedDice >= 1 && adjustedDice <= 6) {
+        if (nextGuidePoint) tutorialRollPlan.shift();
+        return adjustedDice;
+      }
+      if (distance >= 1 && distance <= 6) {
+        if (nextGuidePoint) tutorialRollPlan.shift();
+        return distance;
+      }
+      return 0;
+    }
+
+    function setTutorialRollPlan(plan) {
+      if (!Array.isArray(plan)) {
+        tutorialRollPlan = [];
+        return;
+      }
+      tutorialRollPlan = plan
+        .map((entry) => {
+          if (typeof entry === "number") return Math.floor(entry);
+          const num = Number(entry);
+          if (Number.isFinite(num) && num >= 1 && num <= 6) return Math.floor(num);
+          return String(entry || "").trim();
+        })
+        .filter((entry) => {
+          if (typeof entry === "number") return entry >= 1 && entry <= 6;
+          return ["trap", "shop", "fortuneTeller", "blackMarket", "altar", "finish"].includes(entry);
+        });
     }
 
     function markPlayerDirty(playerId, patch = {}) {
@@ -1770,6 +1960,9 @@ function rafDebounceSyncScale() {
     function clonePlayers(players) {
       return players.map((player) => ({
         ...player,
+        tradeBlockedTurns: Math.max(0, Number(player.tradeBlockedTurns) || 0),
+        cursedItemId: String(player.cursedItemId || ""),
+        cursedItemTurns: Math.max(0, Number(player.cursedItemTurns) || 0),
         fortuneQuest: player.fortuneQuest ? { ...player.fortuneQuest } : null
       }));
     }
@@ -1848,10 +2041,42 @@ function rafDebounceSyncScale() {
         fakeCrystal: 0,
         lotteryTicket: 0,
         bootsActive: false,
+        tradeBlockedTurns: 0,
+        cursedItemId: "",
+        cursedItemTurns: 0,
         fortuneQuest: null,
         finished: false,
         finishOrder: 0
       };
+    }
+
+    function getInventoryItemCountById(player, itemId) {
+      if (!player || !itemId) return 0;
+      if (itemId === "shields") return Number(player.shields) || 0;
+      if (itemId in SHOP_ITEM_TO_PROP) {
+        const prop = SHOP_ITEM_TO_PROP[itemId];
+        return Number(player[prop]) || 0;
+      }
+      return Number(player[itemId]) || 0;
+    }
+
+    function getAvailableInventoryItemIds(player) {
+      const ids = ["boots", "shields", "smallHealPotion", "trapKit", "rerollStone", "lotteryTicket", "alchemyCrystal", "fakeCrystal", "adrenaline", "luckCharm"];
+      return ids.filter((itemId) => getInventoryItemCountById(player, itemId) > 0);
+    }
+
+    function tickTemporaryEffects(player) {
+      if (!player) return;
+      if ((Number(player.tradeBlockedTurns) || 0) > 0) {
+        player.tradeBlockedTurns = Math.max(0, (Number(player.tradeBlockedTurns) || 0) - 1);
+      }
+      if ((Number(player.cursedItemTurns) || 0) > 0) {
+        player.cursedItemTurns = Math.max(0, (Number(player.cursedItemTurns) || 0) - 1);
+        if (player.cursedItemTurns <= 0) {
+          player.cursedItemTurns = 0;
+          player.cursedItemId = "";
+        }
+      }
     }
 
     function generateCellLayout() {
@@ -2020,6 +2245,9 @@ function rafDebounceSyncScale() {
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal
+        ,
+        player.cursedItemId || "",
+        player.cursedItemTurns || 0
       ].join("|");
       const cached = inventorySlotsCache.get(cacheKey);
       if (cached) return cached;
@@ -2041,7 +2269,8 @@ function rafDebounceSyncScale() {
         if (!item) return `<div class="inv-slot">+</div>`;
         // Prevent using boots if they are already active
         const canUse = includeUseActions && item.usable && !(item.id === "boots" && player.bootsActive);
-        const disabledFlag = canUse && (state.rolling || (item.id === "boots" && player.bootsActive));
+        const isCursedBlocked = (Number(player.cursedItemTurns) || 0) > 0 && String(player.cursedItemId || "") === item.id;
+        const disabledFlag = canUse && (state.rolling || (item.id === "boots" && player.bootsActive) || isCursedBlocked);
         const rarityClass = getItemRarityClass(item.id === "shields" ? "shield" : item.id);
         const slotClasses = `inv-slot occupied ${rarityClass}${canUse ? " usable" : ""}${disabledFlag ? " disabled" : ""}`;
         const dataUse = canUse && !disabledFlag ? `data-use-item="${item.id}"` : "";
@@ -2359,6 +2588,10 @@ function rafDebounceSyncScale() {
 
     function applyUnifiedTrade(owner, target, deal) {
       if (!owner || !target || !deal) return false;
+      if ((Number(owner.tradeBlockedTurns) || 0) > 0 || (Number(target.tradeBlockedTurns) || 0) > 0) {
+        logEvent(t("ui.tradeBlockedByChain"));
+        return false;
+      }
       if (!isSameCell(owner.position, target.position)) {
         logEvent(`Trade denied: ${owner.name} and ${target.name} must be on the same tile.`);
         return false;
@@ -2671,22 +2904,6 @@ function rafDebounceSyncScale() {
       resolveFortuneQuestReward(player, player.fortuneQuest);
     }
 
-    function renderBlackMarketPlayerInfo() {
-      const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
-      if (!player) {
-        blackMarketPlayerMetaEl.textContent = "";
-        blackMarketActionBtnEl.disabled = true;
-        return;
-      }
-      const onBlackMarket = hasCellType(player.position, "blackMarket");
-      const canPay = player.gold >= SERVICE_COSTS.blackMarket;
-      blackMarketPlayerMetaEl.innerHTML = `
-        <span class="player-gold">${formatHp(player.hp)}</span>
-        <span class="player-gold">${formatGold(player.gold)}</span>
-      `;
-      blackMarketActionBtnEl.disabled = state.rolling || !onBlackMarket || !canPay;
-    }
-
     function renderAltarPlayerInfo() {
       const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
       if (!player) {
@@ -2764,6 +2981,9 @@ function rafDebounceSyncScale() {
         a: player.alchemyCrystal,
         fc: player.fakeCrystal,
         ba: player.bootsActive ? 1 : 0,
+        tb: Number(player.tradeBlockedTurns) || 0,
+        ci: player.cursedItemId || "",
+        ct: Number(player.cursedItemTurns) || 0,
         fq: player.fortuneQuest || null,
         fi: player.finished ? 1 : 0,
         fo: Number(player.finishOrder) || 0
@@ -2792,6 +3012,9 @@ function rafDebounceSyncScale() {
         alchemyCrystal: Number(raw.a) || 0,
         fakeCrystal: Number(raw.fc) || 0,
         bootsActive: Boolean(raw.ba),
+        tradeBlockedTurns: Math.max(0, Number(raw.tb) || 0),
+        cursedItemId: String(raw.ci || ""),
+        cursedItemTurns: Math.max(0, Number(raw.ct) || 0),
         fortuneQuest: raw.fq && typeof raw.fq === "object" ? { ...raw.fq } : null,
         finished: Boolean(raw.fi),
         finishOrder: Number(raw.fo) || 0
@@ -2940,6 +3163,9 @@ function rafDebounceSyncScale() {
         alchemyCrystal: Math.max(0, Number(player.alchemyCrystal) || 0),
         fakeCrystal: Math.max(0, Number(player.fakeCrystal) || 0),
         bootsActive: Boolean(player.bootsActive),
+        tradeBlockedTurns: Math.max(0, Number(player.tradeBlockedTurns) || 0),
+        cursedItemId: String(player.cursedItemId || ""),
+        cursedItemTurns: Math.max(0, Number(player.cursedItemTurns) || 0),
         fortuneQuest: player.fortuneQuest && typeof player.fortuneQuest === "object" ? { ...player.fortuneQuest } : null,
         finished: Boolean(player.finished),
         finishOrder: Math.max(0, Number(player.finishOrder) || 0)
@@ -3024,6 +3250,7 @@ function rafDebounceSyncScale() {
       fullRender(false);
       logEvent(t("ui.newGameStarted"));
       if (!suppressTutorialAutostartOnce && tutorialManager && window.TutorialManager && !window.TutorialManager.wasSeen()) {
+        setTutorialFixedMapEnabled(true);
         window.setTimeout(() => tutorialManager.start({ force: true }), 250);
       }
       suppressTutorialAutostartOnce = false;
@@ -3088,6 +3315,7 @@ function rafDebounceSyncScale() {
       fullRender(false);
       logEvent(t("ui.fullResetDone"));
       if (!suppressTutorialAutostartOnce && tutorialManager && window.TutorialManager && !window.TutorialManager.wasSeen()) {
+        setTutorialFixedMapEnabled(true);
         window.setTimeout(() => tutorialManager.start({ force: true }), 250);
       }
       suppressTutorialAutostartOnce = false;
@@ -3165,17 +3393,18 @@ function rafDebounceSyncScale() {
     }
 
     function buildCells() {
-      const layout = generateCellLayout();
+      const layout = tutorialFixedMapEnabled ? getTutorialFixedCellLayout() : generateCellLayout();
       const traps = new Set(layout.trap || []);
       const shops = new Set(layout.shop || []);
       const blackMarkets = new Set(layout.blackMarket || []);
       const altars = new Set(layout.altar || []);
       const fortuneTellers = new Set(layout.fortuneTeller || []);
+      const finishCells = new Set(layout.finish || []);
 
       state.cells = Array.from({ length: LAST_CELL }, (_, i) => {
         const number = i + 1;
         const types = [];
-        if (number === LAST_CELL) types.push("finish");
+        if (number === LAST_CELL || finishCells.has(number)) types.push("finish");
         if (traps.has(number)) types.push("trap");
         if (shops.has(number)) types.push("shop");
         if (blackMarkets.has(number)) types.push("blackMarket");
@@ -3387,7 +3616,7 @@ function createBoard() {
     }
 
     function setContextSectionVisible(targetSectionEl) {
-      [shopContextSectionEl, fortuneContextSectionEl, blackMarketContextSectionEl, altarContextSectionEl].forEach((sectionEl) => {
+      [shopContextSectionEl, fortuneContextSectionEl, altarContextSectionEl].forEach((sectionEl) => {
         sectionEl.classList.toggle("visible", sectionEl === targetSectionEl);
       });
     }
@@ -3552,42 +3781,8 @@ function createBoard() {
       animateContextGoldDelta(-fortuneCost);
       logEvent(`${player.name} pays ${formatGold(fortuneCost)} to the Oracle ${getCellTypeIcon("fortuneTeller")} and receives the sign: ${quest.omenLabel}.`);
       logEvent(`Oracle wording for ${player.name}: ${getFortuneQuestConditionText(quest)}`);
+      emitGameEvent("fortune-used", { playerId: player.id, position: player.position });
       return false;
-    }
-
-    function applyBlackMarketAction(player) {
-      const fee = SERVICE_COSTS.blackMarket;
-      const baseProfitChanceMax = Number(CHANCES.blackMarket.profitMax);
-      const baseLossChanceMax = Number(CHANCES.blackMarket.lossMax);
-      const luckBonus = getLuckTalismanBonus(player);
-      const profitChanceMax = clamp(baseProfitChanceMax + luckBonus, 0, 0.95);
-      const lossChanceMax = clamp(Math.max(profitChanceMax, baseLossChanceMax - luckBonus), 0, 1);
-      const result = FortuneActions.applyBlackMarketState({
-        player,
-        fee,
-        roll: Math.random(),
-        profitChanceMax,
-        lossChanceMax,
-        profitGold: REWARDS.blackMarketProfitGold,
-        maxLossGold: REWARDS.blackMarketMaxLossGold
-      });
-      if (!result.ok && result.reason === "not_enough_gold") {
-        logEvent(`${player.name} enters the Shadow market ${getCellTypeIcon("blackMarket")}, but lacks ${formatGold(fee)} for the deal.`);
-        return;
-      }
-      if (!result.ok) return;
-
-      updatePlayerInState(player.id, result.player);
-      animateContextGoldDelta(-fee);
-      if (result.outcome === "profit") {
-        animateContextGoldDelta(REWARDS.blackMarketProfitGold);
-        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")} and lands a profitable deal: +${formatGold(REWARDS.blackMarketProfitGold)}.`);
-      } else if (result.outcome === "loss") {
-        animateContextGoldDelta(-result.loss);
-        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")}, but gets tricked and loses another ${formatGold(result.loss)}.`);
-      } else if (result.outcome === "shield") {
-        logEvent(`${player.name} pays ${formatGold(fee)} at the Shadow market ${getCellTypeIcon("blackMarket")} and gets a rare trophy: +1 Protection Seal.`);
-      }
     }
 
     function applyAltarAction(player) {
@@ -3603,16 +3798,48 @@ function createBoard() {
 
       updatePlayerInState(player.id, result.player);
       animateContextGoldDelta(result.delta);
+      const currentPlayer = state.players.find((entry) => entry.id === player.id);
+      if (!currentPlayer) return;
+
+      const curseRoll = Math.random();
+      if (curseRoll < 0.18) {
+        const availableItems = getAvailableInventoryItemIds(currentPlayer);
+        if (availableItems.length > 0) {
+          const cursedItemId = availableItems[randomInt(0, availableItems.length - 1)];
+          currentPlayer.cursedItemId = cursedItemId;
+          currentPlayer.cursedItemTurns = 2;
+          const cursedLabel = getShopItemName(SHOP_ITEMS.find((item) => item.id === cursedItemId))
+            || (cursedItemId === "shields" ? getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")) : cursedItemId);
+          logEvent(t("ui.altarRelicCurse", { name: currentPlayer.name, item: cursedLabel, turns: 2 }));
+          emitGameEvent("altar-used", { playerId: currentPlayer.id, position: currentPlayer.position, outcome: "cursed_item" });
+          return;
+        }
+      }
+      if (curseRoll < 0.33) {
+        currentPlayer.tradeBlockedTurns = 2;
+        logEvent(t("ui.altarTradeChain", { name: currentPlayer.name, turns: 2 }));
+        emitGameEvent("altar-used", { playerId: currentPlayer.id, position: currentPlayer.position, outcome: "trade_blocked" });
+        return;
+      }
+      if (currentPlayer.fortuneQuest && curseRoll < 0.48) {
+        currentPlayer.fortuneQuest = null;
+        logEvent(t("ui.altarFateShift", { name: currentPlayer.name }));
+        emitGameEvent("altar-used", { playerId: currentPlayer.id, position: currentPlayer.position, outcome: "fate_shift" });
+        return;
+      }
 
       if (result.outcome === "shield") {
         logEvent(`${player.name} offers ${formatGold(tribute)} at the Altar ${getCellTypeIcon("altar")} and receives a blessing: +1 Protection Seal.`);
+        emitGameEvent("altar-used", { playerId: player.id, position: player.position, outcome: result.outcome });
         return;
       }
       if (result.outcome === "boots") {
         logEvent(`${player.name} offers ${formatGold(tribute)} at the Altar ${getCellTypeIcon("altar")} and receives the gift of the path: +1 Ritual Greaves.`);
+        emitGameEvent("altar-used", { playerId: player.id, position: player.position, outcome: result.outcome });
         return;
       }
       logEvent(`${player.name} tries to address the Altar ${getCellTypeIcon("altar")} without tribute and loses ${formatGold(result.penalty)}.`);
+      emitGameEvent("altar-used", { playerId: player.id, position: player.position, outcome: result.outcome });
     }
 
     function closeInventoryOverlay() {
@@ -3643,8 +3870,14 @@ function createBoard() {
 
     function openTradeOverlay() {
       if (!tradeOverlayEl) return;
+      const player = selectedPlayer();
+      if (player && (Number(player.tradeBlockedTurns) || 0) > 0) {
+        logEvent(t("ui.tradeBlockedTurns", { name: player.name, turns: player.tradeBlockedTurns }));
+        return;
+      }
       renderTradeOverlay();
       tradeOverlayEl.classList.add("visible");
+      emitGameEvent("trade-opened");
     }
 
     function renderVictoryOverlay() {
@@ -3742,6 +3975,13 @@ function createBoard() {
         return;
       }
 
+      if ((Number(player.cursedItemTurns) || 0) > 0 && player.cursedItemId && player.cursedItemId === itemId) {
+        const blockedLabel = getShopItemName(SHOP_ITEMS.find((item) => item.id === itemId))
+          || (itemId === "shields" ? getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")) : itemId);
+        logEvent(t("ui.relicCursedBlocked", { name: player.name, item: blockedLabel, turns: player.cursedItemTurns }));
+        return;
+      }
+
       if (itemId === "smallHealPotion") {
         if (player.smallHealPotion < 1) return;
         const healAmount = 25;
@@ -3817,6 +4057,7 @@ function createBoard() {
         logEvent(`${player.name} awakens the Second sign stone: ${reroll}. Move: ${from} -> ${to}.`);
         await movePlayerAnimated(player, to);
         await resolveCellEffects(player);
+        tickTemporaryEffects(player);
 
         state.rolling = false;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
@@ -3983,6 +4224,9 @@ function createBoard() {
         currentLanguage,
         player.id,
         player.bootsActive ? 1 : 0,
+        player.tradeBlockedTurns || 0,
+        player.cursedItemId || "",
+        player.cursedItemTurns || 0,
         player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : ""
       ].join("|");
       const cached = effectsPanelCache.get(cacheKey);
@@ -4010,6 +4254,24 @@ function createBoard() {
           <div class="effect-item">
             <div class="effect-name">${t("ui.bootsPrimed")} ${SHOP_ITEM_META.boots.icon}</div>
             <div class="effect-desc"><strong>${t("ui.condition")}</strong> ${t("ui.nextRollCondition")}</div>
+          </div>
+        `);
+      }
+      if ((Number(player.tradeBlockedTurns) || 0) > 0) {
+        effects.push(`
+          <div class="effect-item bad-event">
+            <div class="effect-name">${t("ui.effectAltarChainTitle")}</div>
+            <div class="effect-desc"><strong>${t("ui.effectTradeBlockedLabel")}</strong> ${t("ui.effectTurnsLeft", { turns: player.tradeBlockedTurns })}</div>
+          </div>
+        `);
+      }
+      if ((Number(player.cursedItemTurns) || 0) > 0 && player.cursedItemId) {
+        const blockedLabel = getShopItemName(SHOP_ITEMS.find((item) => item.id === player.cursedItemId))
+          || (player.cursedItemId === "shields" ? getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")) : player.cursedItemId);
+        effects.push(`
+          <div class="effect-item bad-event">
+            <div class="effect-name">${t("ui.effectRelicCurseTitle")}</div>
+            <div class="effect-desc"><strong>${t("ui.effectBlockedItemLabel")}</strong> ${blockedLabel} (${t("ui.effectTurnsLeft", { turns: player.cursedItemTurns })})</div>
           </div>
         `);
       }
@@ -4052,6 +4314,9 @@ function createBoard() {
         player.rerollStone,
         player.alchemyCrystal,
         player.bootsActive ? 1 : 0,
+        player.tradeBlockedTurns || 0,
+        player.cursedItemId || "",
+        player.cursedItemTurns || 0,
         player.fortuneQuest ? JSON.stringify(player.fortuneQuest) : "",
         state.players.map((entry) => `${entry.id}:${entry.position}:${entry.gold}`).join(";"),
         String(tradeTargetByPlayerId.get(player.id) || ""),
@@ -4063,7 +4328,8 @@ function createBoard() {
       }
       const { slotsHtml } = buildInventorySlotsHtml(player, { includeUseActions: true });
       const effectsHtml = buildEffectsPanelHtml(player);
-      const canOpenTrade = getAdjacentPlayersFor(player).length > 0;
+      const tradeBlocked = (Number(player.tradeBlockedTurns) || 0) > 0;
+      const canOpenTrade = !tradeBlocked && getAdjacentPlayersFor(player).length > 0;
       const tradeOpenTitle = canOpenTrade ? t("ui.tradeOpenTitle") : t("ui.tradeUnavailableTitle");
       playerStatsEl.innerHTML = `
         <div class="player-header">
@@ -4246,10 +4512,15 @@ function createBoard() {
       const cellSizePx = getBoardCellSizePx();
       const stackOffsetsByCell = new Map();
       const stackMetaByPlayerId = new Map();
+      const tutorialMode = isTutorialActive();
       groups.forEach((stack, position) => {
         const sampleToken = ensureToken(stack[0]);
         const tokenSizePx = sampleToken.offsetWidth || 24;
-        stackOffsetsByCell.set(position, buildTokenOffsetsForStack(stack.length, tokenSizePx, cellSizePx));
+        if (tutorialMode) {
+          stackOffsetsByCell.set(position, stack.map(() => ({ x: 0, y: 0 })));
+        } else {
+          stackOffsetsByCell.set(position, buildTokenOffsetsForStack(stack.length, tokenSizePx, cellSizePx));
+        }
         stack.forEach((stackPlayer, index) => {
           stackMetaByPlayerId.set(stackPlayer.id, index);
         });
@@ -4492,9 +4763,45 @@ function createBoard() {
         api: {
           openContextForSelectedPlayer: openTutorialContextForSelectedPlayer,
           closeContext: hideTileContextMenu,
-          closeInventory: closeInventoryOverlay
+          closeInventory: closeInventoryOverlay,
+          prepareTutorialTradeScenario,
+          setTutorialRollPlan,
+          prepareTutorialRollTarget
         }
       });
+    }
+
+    async function prepareTutorialTradeScenario() {
+      if (!isTutorialActive()) return;
+      const owner = selectedPlayer() || state.players[0];
+      if (!owner) return;
+
+      let partner = state.players.find((entry) => entry.id !== owner.id && !isPlayerFinished(entry));
+      if (!partner) {
+        await addPlayer("Лея");
+        partner = state.players.find((entry) => entry.id !== owner.id && !isPlayerFinished(entry));
+      }
+      if (!partner) return;
+
+      const targetCell = owner.position;
+      if (partner.position !== targetCell) {
+        const from = partner.position;
+        partner.position = targetCell;
+        markPlayerDirty(partner.id, {
+          row: true,
+          stats: true,
+          context: true,
+          inventoryOverlay: true,
+          posFrom: from,
+          posTo: targetCell
+        });
+      }
+
+      if (owner.gold < 5) owner.gold = 5;
+      if (partner.gold < 5) partner.gold = 5;
+      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id, partner.id] });
     }
 
     // Tutorial starts on "New game" flow (see reset handlers).
@@ -4572,6 +4879,15 @@ function createBoard() {
     async function resolveCellEffects(player) {
       for (let i = 0; i < 6; i++) {
         const types = getCellTypes(player.position);
+        const notableTypes = ["trap", "shop", "blackMarket", "altar", "fortuneTeller", "finish"];
+        const interactedTypes = notableTypes.filter((type) => types.includes(type));
+        if (interactedTypes.length === 0) {
+          emitGameEvent("cell-interacted", { playerId: player.id, cellNumber: player.position, cellType: "normal", cellTypes: types });
+        } else {
+          interactedTypes.forEach((cellType) => {
+            emitGameEvent("cell-interacted", { playerId: player.id, cellNumber: player.position, cellType, cellTypes: types });
+          });
+        }
         const balance = getCurrentBalanceProfile();
         let moved = false;
 
@@ -4627,75 +4943,121 @@ function createBoard() {
       }, {
         tokenActiveIds: [player.id]
       });
-
-      const dice = getTutorialForcedRoll(player) || (Math.floor(Math.random() * 6) + 1);
-      await animateDiceVisual(dice);
-      let bonus = 0;
-      const actingPlayerId = player.id;
-      if (player.bootsActive && player.boots > 0) {
-        bonus = 2;
-        player.boots -= 1;
-        player.bootsActive = false;
-        logEvent(`${player.name} activated Ritual greaves: +2 to the roll.`);
-      }
-
-      const finalRoll = dice + bonus;
-      const from = player.position;
-      const target = clamp(player.position + finalRoll, 1, LAST_CELL);
-      if (bonus) {
-        logEvent(`${player.name} rolled the die: ${dice} (+${bonus}) = ${finalRoll}. Move: ${from} -> ${target}.`);
-      } else {
-        logEvent(`${player.name} rolled the die: ${dice}. Move: ${from} -> ${target}.`);
-      }
-
-      await movePlayerAnimated(player, target);
+      let actingPlayerAlive = true;
       try {
-        const tokenEl = tokenElsById.get(player.id);
-        if (window.UIEffects && tokenEl) UIEffects.popGoldAtElement(tokenEl, GOLD_PER_MOVE);
-      } catch (e) {
-        console.debug('ui effect gold-per-move failed', e);
-      }
-      player.gold += GOLD_PER_MOVE;
-      markPlayerDirty(player.id, { row: true, stats: true });
+        const dice = getTutorialForcedRoll(player) || (Math.floor(Math.random() * 6) + 1);
+        await animateDiceVisual(dice);
+        let bonus = 0;
+        const actingPlayerId = player.id;
+        if (player.bootsActive && player.boots > 0) {
+          bonus = 2;
+          player.boots -= 1;
+          player.bootsActive = false;
+          logEvent(`${player.name} activated Ritual greaves: +2 to the roll.`);
+        }
 
-      await resolveCellEffects(player);
-      const actingPlayerAlive = state.players.some((entry) => entry.id === actingPlayerId);
-      const activePlayers = getActivePlayers();
+        const finalRoll = dice + bonus;
+        const from = player.position;
+        const target = clamp(player.position + finalRoll, 1, LAST_CELL);
+        if (bonus) {
+          logEvent(`${player.name} rolled the die: ${dice} (+${bonus}) = ${finalRoll}. Move: ${from} -> ${target}.`);
+        } else {
+          logEvent(`${player.name} rolled the die: ${dice}. Move: ${from} -> ${target}.`);
+        }
 
-      if (!state.gameEnded && activePlayers.length > 1) {
+        await movePlayerAnimated(player, target);
+        if (isTutorialActive() && player.position !== target) {
+          const correctedFrom = player.position;
+          player.position = target;
+          markPlayerDirty(player.id, {
+            row: true,
+            stats: true,
+            context: true,
+            inventoryOverlay: true,
+            posFrom: correctedFrom,
+            posTo: target
+          });
+          queueRenderFromDirty({ autosave: false, selectedTile: true, tokenActiveIds: [player.id] });
+        }
+        try {
+          const tokenEl = tokenElsById.get(player.id);
+          if (window.UIEffects && tokenEl) UIEffects.popGoldAtElement(tokenEl, GOLD_PER_MOVE);
+        } catch (e) {
+          console.debug('ui effect gold-per-move failed', e);
+        }
+        player.gold += GOLD_PER_MOVE;
+        markPlayerDirty(player.id, { row: true, stats: true });
+
+        await resolveCellEffects(player);
+        actingPlayerAlive = state.players.some((entry) => entry.id === actingPlayerId);
         if (actingPlayerAlive) {
-          const actingIndex = activePlayers.findIndex((entry) => entry.id === actingPlayerId);
-          state.turnIndex = actingIndex >= 0 ? (actingIndex + 1) % activePlayers.length : state.turnIndex;
+          tickTemporaryEffects(player);
+          markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
         }
-        const prevSelectedId = state.selectedPlayerId;
-        selectPlayerByTurnIndex();
-        if (state.selectedPlayerId) {
-          const nextPlayer = state.players.find((entry) => entry.id === state.selectedPlayerId);
-          if (nextPlayer) logEvent(`Turn passed to: ${nextPlayer.name}.`);
-        }
-        markPlayerDirty(prevSelectedId, { row: true, stats: true });
-      } else if (!state.gameEnded && activePlayers.length === 1) {
-        state.turnIndex = 0;
-        state.selectedPlayerId = activePlayers[0].id;
-      } else if (activePlayers.length === 0) {
-        state.turnIndex = 0;
-        state.selectedPlayerId = state.players[0]?.id || "";
-      }
+        const activePlayers = getActivePlayers();
 
-      state.rolling = false;
-      if (actingPlayerAlive) {
-        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        if (!state.gameEnded && activePlayers.length > 1) {
+          if (isTutorialActive() && actingPlayerAlive) {
+            const actingIndex = activePlayers.findIndex((entry) => entry.id === actingPlayerId);
+            if (actingIndex >= 0) {
+              state.turnIndex = actingIndex;
+              state.selectedPlayerId = activePlayers[actingIndex].id;
+            }
+            markPlayerDirty(state.selectedPlayerId, { row: true, stats: true });
+          } else {
+          if (actingPlayerAlive) {
+            const actingIndex = activePlayers.findIndex((entry) => entry.id === actingPlayerId);
+            state.turnIndex = actingIndex >= 0 ? (actingIndex + 1) % activePlayers.length : state.turnIndex;
+          }
+          const prevSelectedId = state.selectedPlayerId;
+          selectPlayerByTurnIndex();
+          if (state.selectedPlayerId) {
+            const nextPlayer = state.players.find((entry) => entry.id === state.selectedPlayerId);
+            if (nextPlayer) logEvent(`Turn passed to: ${nextPlayer.name}.`);
+          }
+          markPlayerDirty(prevSelectedId, { row: true, stats: true });
+          }
+        } else if (!state.gameEnded && activePlayers.length === 1) {
+          state.turnIndex = 0;
+          state.selectedPlayerId = activePlayers[0].id;
+        } else if (activePlayers.length === 0) {
+          state.turnIndex = 0;
+          state.selectedPlayerId = state.players[0]?.id || "";
+        }
+      } catch (error) {
+        console.error("rollForSelectedPlayer failed", error);
+        logEvent("Roll failed due to an internal error. Please try again.");
+      } finally {
+        state.rolling = false;
+        if (isTutorialActive() && actingPlayerAlive) {
+          state.selectedPlayerId = player.id;
+          invalidateCellCenterCache();
+        }
+        if (actingPlayerAlive) {
+          markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        }
+        if (isTutorialActive() && actingPlayerAlive) {
+          prepareTutorialPlayerForShop(player);
+          markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        }
+        queueRenderFromDirty({
+          autosave: true,
+          selectedTile: true,
+          tokenActiveIds: [state.selectedPlayerId, player.id]
+        });
+        if (isTutorialActive() && actingPlayerAlive) {
+          queueRender({
+            tokensFull: true,
+            players: true,
+            stats: true,
+            selectedTile: true,
+            refreshInventoryOverlay: true,
+            refreshContextMenu: true
+          }, { autosave: false, tokenActiveIds: [player.id] });
+          logEvent(`[Tutorial check] ${player.name} final tile: ${player.position}.`);
+        }
+        emitGameEvent("roll-finished", { playerId: player.id, position: player.position });
       }
-      if (isTutorialActive() && actingPlayerAlive) {
-        prepareTutorialPlayerForShop(player);
-        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      }
-      queueRenderFromDirty({
-        autosave: true,
-        selectedTile: true,
-        tokenActiveIds: [state.selectedPlayerId, player.id]
-      });
-      emitGameEvent("roll-finished", { playerId: player.id, position: player.position });
     }
 
     function undoLastAction() {
@@ -5227,11 +5589,7 @@ function createBoard() {
       }
       if (tutorialBtnEl) {
         tutorialBtnEl.addEventListener("click", () => {
-          setSettingsPanelOpen(false);
-          if (!tutorialManager && window.TutorialManager) setupTutorial();
-          window.TutorialManager?.reset();
-          setMainMenuOpen(true);
-          window.setTimeout(() => tutorialManager?.start({ force: true }), 80);
+          setTutorialModePickerOpen(true);
         });
       }
       if (sessionSelectEl) {
@@ -5475,6 +5833,32 @@ function createBoard() {
           syncSessionPickerSelect();
         });
       }
+      if (tutorialModeCloseBtnEl) {
+        tutorialModeCloseBtnEl.addEventListener("click", () => setTutorialModePickerOpen(false));
+      }
+      if (tutorialModeFullBtnEl) {
+        tutorialModeFullBtnEl.addEventListener("click", () => startTutorialByMode("full"));
+      }
+      if (tutorialModeCellsBtnEl) {
+        tutorialModeCellsBtnEl.addEventListener("click", () => startTutorialByMode("cells"));
+      }
+      if (tutorialModeQuickBtnEl) {
+        tutorialModeQuickBtnEl.addEventListener("click", () => startTutorialByMode("quick"));
+      }
+      if (tutorialModePickerEl) {
+        tutorialModePickerEl.addEventListener("click", (event) => {
+          if (event.target === tutorialModePickerEl) setTutorialModePickerOpen(false);
+        });
+      }
+      document.addEventListener("tutorial:finished", (event) => {
+        const skipped = Boolean(event?.detail?.skipped);
+        if (!skipped && activeTutorialMode) {
+          markTutorialChapterCompleted(activeTutorialMode);
+        }
+        setTutorialModePersisted("");
+        setTutorialFixedMapEnabled(false);
+        activeTutorialMode = "";
+      });
       let moveToTileClickTimer = null;
       moveToTileBtnEl.addEventListener("click", () => {
         // Delay single-click so a double-click can override it.
@@ -5579,6 +5963,7 @@ function createBoard() {
               sealEl.classList.add("active");
               window.setTimeout(() => sealEl.classList.remove("active"), 850);
             }
+            emitGameEvent("trade-sealed", { ownerId: owner.id, targetId: target.id });
           }
           return;
         }
@@ -5662,18 +6047,12 @@ function createBoard() {
           logEvent("Action unavailable: no player selected.");
           return;
         }
-        if (action === "blackMarket" && !hasCellType(player.position, "blackMarket")) {
-          logEvent(`Deal denied: ${player.name} must stand on the Shadow market tile ${getCellTypeIcon("blackMarket")}.`);
-          return;
-        }
         if (action === "altar" && !hasCellType(player.position, "altar")) {
           logEvent(`Ritual denied: ${player.name} must stand on the Altar tile ${getCellTypeIcon("altar")}.`);
           return;
         }
-        pushHistory(action === "blackMarket" ? "Shadow market deal" : "Altar ritual");
-        if (action === "blackMarket") {
-          applyBlackMarketAction(player);
-        } else if (action === "altar") {
+        pushHistory("Altar ritual");
+        if (action === "altar") {
           applyAltarAction(player);
         }
         queueRenderFromDirty({ autosave: true, tokenActiveIds: [player.id] });
@@ -5696,6 +6075,10 @@ function createBoard() {
         }
         if (event.key === "Escape" && sessionPickerEl && !sessionPickerEl.classList.contains("is-hidden")) {
           setSessionPickerOpen(false);
+          return;
+        }
+        if (event.key === "Escape" && tutorialModePickerEl && !tutorialModePickerEl.classList.contains("is-hidden")) {
+          setTutorialModePickerOpen(false);
           return;
         }
         if (event.key === "Escape" && eventJournalEl && !eventJournalEl.classList.contains("is-hidden")) {
@@ -5766,11 +6149,14 @@ function createBoard() {
         pendingSessionName = String(window.localStorage.getItem(PENDING_NEW_GAME_NAME_KEY) || "").trim().slice(0, 40);
         window.localStorage.removeItem(PENDING_NEW_GAME_NAME_KEY);
         shouldResumeTutorial = !window.localStorage.getItem(TUTORIAL_SEEN_KEY) && Boolean(window.localStorage.getItem(TUTORIAL_PROGRESS_KEY));
+        tutorialFixedMapEnabled = window.localStorage.getItem(TUTORIAL_FIXED_MAP_KEY) === "1";
+        activeTutorialMode = getTutorialModePersisted() || activeTutorialMode;
       } catch (_) {
         shouldStartPendingNewGame = false;
         pendingPlayersSeed = [];
         pendingSessionName = "";
         shouldResumeTutorial = false;
+        tutorialFixedMapEnabled = false;
       }
       buildCells();
       createBoard();
@@ -5825,7 +6211,8 @@ function createBoard() {
       logEvent(t("ui.gameReady"));
       setMainMenuOpen(!shouldStartPendingNewGame);
       if (shouldResumeTutorial) {
-        window.setTimeout(() => tutorialManager?.start(), 120);
+        setTutorialFixedMapEnabled(true);
+        window.setTimeout(() => tutorialManager?.start({ mode: activeTutorialMode || "full" }), 120);
       }
 
       if ("serviceWorker" in navigator) {
@@ -5838,3 +6225,4 @@ function createBoard() {
     }
 
     init();
+
