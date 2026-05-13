@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   global.GAME_CONFIG = {
@@ -74,6 +74,7 @@
       { id: "smallHealPotion", nameKey: "items.smallHealPotion.name", descKey: "items.smallHealPotion.desc", price: 55 },
       { id: "trapKit", nameKey: "items.trapKit.name", descKey: "items.trapKit.desc", price: 95 },
       { id: "rerollStone", nameKey: "items.rerollStone.name", descKey: "items.rerollStone.desc", price: 140 },
+      { id: "unstablePortal", nameKey: "items.unstablePortal.name", descKey: "items.unstablePortal.desc", price: 125 },
       { id: "lotteryTicket", nameKey: "items.lotteryTicket.name", descKey: "items.lotteryTicket.desc", price: 60 },
       { id: "alchemyCrystal", nameKey: "items.alchemyCrystal.name", descKey: "items.alchemyCrystal.desc", price: 220 },
       { id: "fakeCrystal", nameKey: "items.fakeCrystal.name", descKey: "items.fakeCrystal.desc", price: 70 },
@@ -88,6 +89,7 @@
       adrenaline: { icon: "🧪" },
       trapKit: { icon: "🧰" },
       rerollStone: { icon: "🎲" },
+      unstablePortal: { icon: "🌀" },
       alchemyCrystal: { icon: "💎" },
       smallHealPotion: { icon: "🍷" },
       lotteryTicket: { icon: "🎟️" },
@@ -116,3 +118,6 @@
     }
   };
 })(window);
+
+
+

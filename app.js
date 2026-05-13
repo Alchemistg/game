@@ -101,6 +101,7 @@ CONFIG = window.GAME_CONFIG;
       smallHealPotion: "smallHealPotion",
       trapKit: "trapKit",
       rerollStone: "rerollStone",
+      unstablePortal: "unstablePortal",
       lotteryTicket: "lotteryTicket",
       alchemyCrystal: "alchemyCrystal",
       fakeCrystal: "fakeCrystal",
@@ -1201,7 +1202,7 @@ function formatLogEntry(entry) {
         option.textContent = getSessionLabel(session);
         if (session.finished) {
           option.className = "session-finished";
-          option.textContent = "РІСљвЂњ " + option.textContent;
+          option.textContent = "Р Р†РЎС™РІР‚Сљ " + option.textContent;
         }
         sessionSelectEl.appendChild(option);
       });
@@ -1220,7 +1221,7 @@ function formatLogEntry(entry) {
         option.textContent = getSessionLabel(session);
         if (session.finished) {
           option.className = "session-finished";
-          option.textContent = "РІСљвЂњ " + option.textContent;
+          option.textContent = "Р Р†РЎС™РІР‚Сљ " + option.textContent;
         }
         sessionPickerSelectEl.appendChild(option);
       });
@@ -1487,7 +1488,7 @@ function formatLogEntry(entry) {
       const candidates = sessions.filter((s) => hasSessionSave(s.id));
       if (candidates.length === 0) return "";
 
-      // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (updatedAt) пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+      // РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… РїС—Р…РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… (updatedAt) РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р… РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…РїС—Р…
       candidates.sort((a, b) => {
         const timeA = new Date(a.updatedAt || 0).getTime();
         const timeB = new Date(b.updatedAt || 0).getTime();
@@ -1545,7 +1546,7 @@ function formatLogEntry(entry) {
     }
 
     function emitGameEvent(name, detail = {}) {
-      document.dispatchEvent(new CustomEvent(`game:${name}`, { detail }));
+      return window.InfraEvents.emitGameEvent(name, detail);
     }
 
     function isTutorialActive() {
@@ -2065,6 +2066,7 @@ function rafDebounceSyncScale() {
         smallHealPotion: 0,
         trapKit: 0,
         rerollStone: 0,
+        unstablePortal: 0,
         alchemyCrystal: 0,
         fakeCrystal: 0,
         fateChalice: 0,
@@ -2081,18 +2083,12 @@ function rafDebounceSyncScale() {
     }
 
     function getInventoryItemCountById(player, itemId) {
-      if (!player || !itemId) return 0;
-      if (itemId === "shields") return Number(player.shields) || 0;
-      if (itemId in SHOP_ITEM_TO_PROP) {
-        const prop = SHOP_ITEM_TO_PROP[itemId];
-        return Number(player[prop]) || 0;
-      }
-      return Number(player[itemId]) || 0;
+      return window.InventoryDomain.getInventoryItemCountById(player, itemId, SHOP_ITEM_TO_PROP);
     }
 
     function getAvailableInventoryItemIds(player) {
-      const ids = ["boots", "shields", "smallHealPotion", "trapKit", "rerollStone", "lotteryTicket", "alchemyCrystal", "fakeCrystal", "fateChalice", "cleansingIncense", "adrenaline", "luckCharm"];
-      return ids.filter((itemId) => getInventoryItemCountById(player, itemId) > 0);
+      const ids = ["boots", "shields", "smallHealPotion", "trapKit", "rerollStone", "unstablePortal", "lotteryTicket", "alchemyCrystal", "fakeCrystal", "fateChalice", "cleansingIncense", "adrenaline", "luckCharm"];
+      return window.InventoryDomain.getAvailableInventoryItemIds(player, ids, SHOP_ITEM_TO_PROP);
     }
 
     function tickTemporaryEffects(player) {
@@ -2241,6 +2237,7 @@ function rafDebounceSyncScale() {
         luckCharm: "rarity-uncommon",
         trapKit: "rarity-rare",
         rerollStone: "rarity-rare",
+        unstablePortal: "rarity-rare",
         lotteryTicket: "rarity-uncommon",
         smallHealPotion: "rarity-common",
         fakeCrystal: "rarity-epic",
@@ -2274,6 +2271,7 @@ function rafDebounceSyncScale() {
         player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
+        player.unstablePortal,
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
@@ -2293,10 +2291,11 @@ function rafDebounceSyncScale() {
         { id: "smallHealPotion", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "smallHealPotion")), icon: SHOP_ITEM_META.smallHealPotion.icon, count: player.smallHealPotion, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "smallHealPotion")) },
         { id: "trapKit", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "trapKit")), icon: SHOP_ITEM_META.trapKit.icon, count: player.trapKit, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "trapKit")) },
         { id: "rerollStone", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "rerollStone")), icon: SHOP_ITEM_META.rerollStone.icon, count: player.rerollStone, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "rerollStone")) },
+        { id: "unstablePortal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "unstablePortal")), icon: SHOP_ITEM_META.unstablePortal.icon, count: player.unstablePortal, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "unstablePortal")) },
         { id: "lotteryTicket", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")), icon: SHOP_ITEM_META.lotteryTicket.icon, count: player.lotteryTicket, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "lotteryTicket")) },
         { id: "alchemyCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "alchemyCrystal")), icon: SHOP_ITEM_META.alchemyCrystal.icon, count: player.alchemyCrystal, usable: false, desc: t("items.alchemyCrystal.desc") },
         { id: "fakeCrystal", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")), icon: SHOP_ITEM_META.fakeCrystal.icon, count: player.fakeCrystal, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fakeCrystal")) },
-        { id: "fateChalice", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fateChalice")), icon: SHOP_ITEM_META.fateChalice.icon, count: player.fateChalice, usable: false, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fateChalice")) },
+        { id: "fateChalice", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "fateChalice")), icon: SHOP_ITEM_META.fateChalice.icon, count: player.fateChalice, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "fateChalice")) },
         { id: "cleansingIncense", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "cleansingIncense")), icon: SHOP_ITEM_META.cleansingIncense.icon, count: player.cleansingIncense, usable: true, desc: getShopItemDesc(SHOP_ITEMS.find((item) => item.id === "cleansingIncense")) }
       ].filter((item) => item.count > 0);
 
@@ -2333,21 +2332,22 @@ function rafDebounceSyncScale() {
     }
 
     function getOccupiedInventorySlots(player) {
-      const counts = [
-        player.boots,
-        player.shields,
-        player.luckCharm,
-        player.adrenaline,
-        player.smallHealPotion,
-        player.trapKit,
-        player.rerollStone,
-        player.lotteryTicket,
-        player.alchemyCrystal,
-        player.fakeCrystal,
-        player.fateChalice,
-        player.cleansingIncense
+      const slotProps = [
+        "boots",
+        "shields",
+        "luckCharm",
+        "adrenaline",
+        "smallHealPotion",
+        "trapKit",
+        "rerollStone",
+        "unstablePortal",
+        "lotteryTicket",
+        "alchemyCrystal",
+        "fakeCrystal",
+        "fateChalice",
+        "cleansingIncense"
       ];
-      return counts.reduce((acc, count) => acc + (count > 0 ? 1 : 0), 0);
+      return window.InventoryDomain.getOccupiedInventorySlots(player, slotProps);
     }
 
     function canAddItemType(player, itemId) {
@@ -2359,15 +2359,29 @@ function rafDebounceSyncScale() {
         smallHealPotion: player.smallHealPotion,
         trapKit: player.trapKit,
         rerollStone: player.rerollStone,
+        unstablePortal: player.unstablePortal,
         lotteryTicket: player.lotteryTicket,
         alchemyCrystal: player.alchemyCrystal,
         fakeCrystal: player.fakeCrystal,
         fateChalice: player.fateChalice,
         cleansingIncense: player.cleansingIncense
       };
-      const current = byId[itemId] ?? 0;
-      if (current > 0) return true;
-      return getOccupiedInventorySlots(player) < INVENTORY_SLOT_LIMIT;
+      const slotProps = [
+        "boots",
+        "shields",
+        "luckCharm",
+        "adrenaline",
+        "smallHealPotion",
+        "trapKit",
+        "rerollStone",
+        "unstablePortal",
+        "lotteryTicket",
+        "alchemyCrystal",
+        "fakeCrystal",
+        "fateChalice",
+        "cleansingIncense"
+      ];
+      return window.InventoryDomain.canAddItemType(player, itemId, byId, INVENTORY_SLOT_LIMIT, slotProps);
     }
 
     function isAdjacentCell(a, b) {
@@ -2406,88 +2420,25 @@ function rafDebounceSyncScale() {
     }
 
     function getTradeItemDefs(player) {
-      const defs = [
-        { prop: "boots", addKey: "boots", shopId: "boots" },
-        { prop: "shields", addKey: "shield", shopId: "shield" },
-        { prop: "luckCharm", addKey: "luckCharm", shopId: "luckCharm" },
-        { prop: "adrenaline", addKey: "adrenaline", shopId: "adrenaline" },
-        { prop: "smallHealPotion", addKey: "smallHealPotion", shopId: "smallHealPotion" },
-        { prop: "trapKit", addKey: "trapKit", shopId: "trapKit" },
-        { prop: "rerollStone", addKey: "rerollStone", shopId: "rerollStone" },
-        { prop: "lotteryTicket", addKey: "lotteryTicket", shopId: "lotteryTicket" },
-        { prop: "alchemyCrystal", addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
-        { prop: "fakeCrystal", addKey: "fakeCrystal", shopId: "fakeCrystal" },
-        { prop: "fateChalice", addKey: "fateChalice", shopId: "fateChalice" },
-        { prop: "cleansingIncense", addKey: "cleansingIncense", shopId: "cleansingIncense" }
-      ];
-      return defs
-        .filter((item) => Math.max(0, Number(player[item.prop]) || 0) > 0)
-        .map((item) => {
-          const shopItem = SHOP_ITEMS.find((entry) => entry.id === item.shopId);
-          return {
-            prop: item.prop,
-            addKey: item.addKey,
-            shopId: item.shopId,
-            count: Math.max(0, Number(player[item.prop]) || 0),
-            name: shopItem ? getShopItemName(shopItem) : item.prop,
-            icon: SHOP_ITEM_META[item.shopId]?.icon || iconUnknown(),
-            desc: shopItem ? getShopItemDesc(shopItem) : item.prop
-          };
-        });
+      return window.DomainTrade.getTradeItemDefs(player, {
+        getShopItemById: (id) => SHOP_ITEMS.find((entry) => entry.id === id),
+        getShopItemName,
+        getShopItemDesc,
+        getShopItemIcon: (id) => SHOP_ITEM_META[id]?.icon || "",
+        iconUnknown
+      });
     }
 
     function getTradeTransferDef(itemProp) {
-      const transferDefs = {
-        boots: { addKey: "boots", shopId: "boots" },
-        shields: { addKey: "shield", shopId: "shield" },
-        luckCharm: { addKey: "luckCharm", shopId: "luckCharm" },
-        adrenaline: { addKey: "adrenaline", shopId: "adrenaline" },
-        smallHealPotion: { addKey: "smallHealPotion", shopId: "smallHealPotion" },
-        trapKit: { addKey: "trapKit", shopId: "trapKit" },
-        rerollStone: { addKey: "rerollStone", shopId: "rerollStone" },
-        lotteryTicket: { addKey: "lotteryTicket", shopId: "lotteryTicket" },
-        alchemyCrystal: { addKey: "alchemyCrystal", shopId: "alchemyCrystal" },
-        fakeCrystal: { addKey: "fakeCrystal", shopId: "fakeCrystal" },
-        fateChalice: { addKey: "fateChalice", shopId: "fateChalice" },
-        cleansingIncense: { addKey: "cleansingIncense", shopId: "cleansingIncense" }
-      };
-      return transferDefs[itemProp] || null;
+      return window.DomainTrade.getTradeTransferDef(itemProp);
     }
 
     function buildTradeInventoryCounts(player) {
-      return {
-        boots: Number(player.boots) || 0,
-        shields: Number(player.shields) || 0,
-        luckCharm: Number(player.luckCharm) || 0,
-        adrenaline: Number(player.adrenaline) || 0,
-        smallHealPotion: Number(player.smallHealPotion) || 0,
-        trapKit: Number(player.trapKit) || 0,
-        rerollStone: Number(player.rerollStone) || 0,
-        lotteryTicket: Number(player.lotteryTicket) || 0,
-        alchemyCrystal: Number(player.alchemyCrystal) || 0,
-        fakeCrystal: Number(player.fakeCrystal) || 0,
-        fateChalice: Number(player.fateChalice) || 0,
-        cleansingIncense: Number(player.cleansingIncense) || 0
-      };
+      return window.DomainTrade.buildTradeInventoryCounts(player);
     }
 
     function canResolveTradeInventory(player, giveItems, getItems) {
-      const nextCounts = buildTradeInventoryCounts(player);
-      const giveUnique = [...new Set((Array.isArray(giveItems) ? giveItems : []).filter(Boolean))];
-      const getUnique = [...new Set((Array.isArray(getItems) ? getItems : []).filter(Boolean))];
-
-      giveUnique.forEach((prop) => {
-        nextCounts[prop] = (nextCounts[prop] || 0) - 1;
-      });
-      getUnique.forEach((prop) => {
-        nextCounts[prop] = (nextCounts[prop] || 0) + 1;
-      });
-
-      const hasNegative = Object.values(nextCounts).some((count) => count < 0);
-      if (hasNegative) return false;
-
-      const occupied = Object.values(nextCounts).reduce((acc, count) => acc + (count > 0 ? 1 : 0), 0);
-      return occupied <= INVENTORY_SLOT_LIMIT;
+      return window.DomainTrade.canResolveTradeInventory(player, giveItems, getItems, INVENTORY_SLOT_LIMIT);
     }
 
     function buildTradeInventoryHtml(items, selectedProps, role) {
@@ -2633,63 +2584,26 @@ function rafDebounceSyncScale() {
     }
 
     function applyUnifiedTrade(owner, target, deal) {
-      if (!owner || !target || !deal) return false;
-      if ((Number(owner.tradeBlockedTurns) || 0) > 0 || (Number(target.tradeBlockedTurns) || 0) > 0) {
-        logEvent(t("ui.tradeBlockedByChain"));
-        return false;
-      }
-      if (!isSameCell(owner.position, target.position)) {
-        logEvent(`Trade denied: ${owner.name} and ${target.name} must be on the same tile.`);
-        return false;
-      }
-
-      const giveGold = Math.max(0, Math.trunc(Number(deal.giveGold) || 0));
-      const getGold = Math.max(0, Math.trunc(Number(deal.getGold) || 0));
-      const giveItems = [...new Set((Array.isArray(deal.giveItems) ? deal.giveItems : []).map((item) => String(item || "")).filter(Boolean))];
-      const getItems = [...new Set((Array.isArray(deal.getItems) ? deal.getItems : []).map((item) => String(item || "")).filter(Boolean))];
-      if (!giveItems.length && !getItems.length && giveGold < 1 && getGold < 1) return false;
-      if (!canResolveTradeInventory(owner, giveItems, getItems)) return false;
-      if (!canResolveTradeInventory(target, getItems, giveItems)) return false;
-      if (owner.gold < giveGold) return false;
-      if (target.gold < getGold) return false;
-
-      pushHistory(`Trade deal: ${owner.name} <-> ${target.name}`);
-      giveItems.forEach((itemProp) => {
-        owner[itemProp] -= 1;
-        target[itemProp] += 1;
+      return window.DomainTrade.applyUnifiedTrade(owner, target, deal, {
+        t,
+        isSameCell,
+        inventorySlotLimit: INVENTORY_SLOT_LIMIT,
+        logEvent,
+        pushHistory,
+        markPlayerDirty,
+        formatGold,
+        queueRenderFromDirty
       });
-      getItems.forEach((itemProp) => {
-        target[itemProp] -= 1;
-        owner[itemProp] += 1;
-      });
-      if (giveGold > 0) {
-        owner.gold -= giveGold;
-        target.gold += giveGold;
-      }
-      if (getGold > 0) {
-        target.gold -= getGold;
-        owner.gold += getGold;
-      }
-
-      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      markPlayerDirty(target.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      const giveGoldLabel = giveGold > 0 ? ` + ${formatGold(giveGold)}` : "";
-      const getGoldLabel = getGold > 0 ? ` + ${formatGold(getGold)}` : "";
-      const giveItemsLabel = giveItems.length ? giveItems.join(", ") : (giveGold > 0 ? "gold" : "nothing");
-      const getItemsLabel = getItems.length ? getItems.join(", ") : (getGold > 0 ? "gold" : "nothing");
-      logEvent(`Trade: ${owner.name} gives ${giveItemsLabel}${giveGoldLabel}, gets ${getItemsLabel}${getGoldLabel}.`);
-      queueRenderFromDirty({ autosave: true, tokenActiveIds: [owner.id, target.id] });
-      return true;
     }
     function applyGoldTrade(fromPlayer, toPlayer, amountRaw) {
       const amount = Math.max(1, Math.trunc(Number(amountRaw) || 0));
       if (!amount) return;
       if (!isSameCell(fromPlayer.position, toPlayer.position)) {
-        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: ${fromPlayer.name} Рё ${toPlayer.name} РґРѕР»Р¶РЅС‹ СЃС‚РѕСЏС‚СЊ РЅР° РѕРґРЅРѕР№ РєР»РµС‚РєРµ.`);
+        logEvent(`Р С›Р В±Р СР ВµР Р… Р С•РЎвЂљР С”Р В»Р С•Р Р…РЎвЂР Р…: ${fromPlayer.name} Р С‘ ${toPlayer.name} Р Т‘Р С•Р В»Р В¶Р Р…РЎвЂ№ РЎРѓРЎвЂљР С•РЎРЏРЎвЂљРЎРЉ Р Р…Р В° Р С•Р Т‘Р Р…Р С•Р в„– Р С”Р В»Р ВµРЎвЂљР С”Р Вµ.`);
         return;
       }
       if ((fromPlayer.gold || 0) < amount) {
-        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${fromPlayer.name} РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ Р·РѕР»РѕС‚Р°.`);
+        logEvent(`Р С›Р В±Р СР ВµР Р… Р С•РЎвЂљР С”Р В»Р С•Р Р…РЎвЂР Р…: РЎС“ ${fromPlayer.name} Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљР В°РЎвЂљР С•РЎвЂЎР Р…Р С• Р В·Р С•Р В»Р С•РЎвЂљР В°.`);
         return;
       }
       pushHistory(`Trade gold: ${fromPlayer.name} -> ${toPlayer.name}`);
@@ -2697,69 +2611,36 @@ function rafDebounceSyncScale() {
       toPlayer.gold += amount;
       markPlayerDirty(fromPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       markPlayerDirty(toPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      logEvent(`РўРѕСЂРіРѕРІР»СЏ: ${fromPlayer.name} РїРµСЂРµРґР°С‘С‚ ${toPlayer.name} ${formatGold(amount)}.`);
+      logEvent(`Р СћР С•РЎР‚Р С–Р С•Р Р†Р В»РЎРЏ: ${fromPlayer.name} Р С—Р ВµРЎР‚Р ВµР Т‘Р В°РЎвЂРЎвЂљ ${toPlayer.name} ${formatGold(amount)}.`);
       queueRenderFromDirty({ autosave: true, tokenActiveIds: [fromPlayer.id, toPlayer.id] });
     }
 
     function applyItemTrade(fromPlayer, toPlayer, itemProp) {
-      const def = getTradeTransferDef(itemProp);
-      if (!def) return;
-      if (!isSameCell(fromPlayer.position, toPlayer.position)) {
-        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: ${fromPlayer.name} Рё ${toPlayer.name} РґРѕР»Р¶РЅС‹ СЃС‚РѕСЏС‚СЊ РЅР° РѕРґРЅРѕР№ РєР»РµС‚РєРµ.`);
-        return;
-      }
-      if ((fromPlayer[itemProp] || 0) < 1) {
-        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${fromPlayer.name} РЅРµС‚ РЅСѓР¶РЅРѕРіРѕ РїСЂРµРґРјРµС‚Р°.`);
-        return;
-      }
-      if (!canAddItemType(toPlayer, def.addKey)) {
-        logEvent(`РћР±РјРµРЅ РѕС‚РєР»РѕРЅС‘РЅ: Сѓ ${toPlayer.name} РЅРµС‚ СЃРІРѕР±РѕРґРЅРѕРіРѕ СЃР»РѕС‚Р° РґР»СЏ РЅРѕРІРѕРіРѕ С‚РёРїР° РїСЂРµРґРјРµС‚Р°.`);
-        return;
-      }
-      const shopItem = SHOP_ITEMS.find((entry) => entry.id === def.shopId);
-      const itemLabel = shopItem ? getShopItemName(shopItem) : itemProp;
-      pushHistory(`Trade item: ${fromPlayer.name} -> ${toPlayer.name}`);
-      fromPlayer[itemProp] -= 1;
-      toPlayer[itemProp] += 1;
-      markPlayerDirty(fromPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      markPlayerDirty(toPlayer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      logEvent(`РўРѕСЂРіРѕРІР»СЏ: ${fromPlayer.name} РїРµСЂРµРґР°С‘С‚ ${toPlayer.name} РїСЂРµРґРјРµС‚ "${itemLabel}".`);
-      queueRenderFromDirty({ autosave: true, tokenActiveIds: [fromPlayer.id, toPlayer.id] });
+      return window.DomainTrade.applyItemTrade(fromPlayer, toPlayer, itemProp, {
+        isSameCell,
+        canAddItemType,
+        getShopItemById: (id) => SHOP_ITEMS.find((entry) => entry.id === id),
+        getShopItemName,
+        logEvent,
+        pushHistory,
+        markPlayerDirty,
+        queueRenderFromDirty
+      });
     }
 
     function applyGoldForItemTrade(buyer, seller, itemProp, priceRaw) {
-      const def = getTradeTransferDef(itemProp);
-      if (!def) return;
-      const price = Math.max(1, Math.trunc(Number(priceRaw) || 0));
-      if (!isSameCell(buyer.position, seller.position)) {
-        logEvent(`Trade denied: ${buyer.name} and ${seller.name} must be on the same tile.`);
-        return;
-      }
-      if ((buyer.gold || 0) < price) {
-        logEvent(`Trade denied: ${buyer.name} does not have enough gold.`);
-        return;
-      }
-      if ((seller[itemProp] || 0) < 1) {
-        logEvent(`Trade denied: ${seller.name} does not have the selected item.`);
-        return;
-      }
-      if (!canAddItemType(buyer, def.addKey)) {
-        logEvent(`Trade denied: ${buyer.name} has no free inventory slot for a new item type.`);
-        return;
-      }
-      const shopItem = SHOP_ITEMS.find((entry) => entry.id === def.shopId);
-      const itemLabel = shopItem ? getShopItemName(shopItem) : itemProp;
-      pushHistory(`Trade deal: ${buyer.name} buys ${itemLabel} from ${seller.name}`);
-      buyer.gold -= price;
-      seller.gold += price;
-      seller[itemProp] -= 1;
-      buyer[itemProp] += 1;
-      markPlayerDirty(buyer.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      markPlayerDirty(seller.id, { row: true, stats: true, context: true, inventoryOverlay: true });
-      logEvent(`Trade deal: ${buyer.name} pays ${formatGold(price)} to ${seller.name} for "${itemLabel}".`);
-      queueRenderFromDirty({ autosave: true, tokenActiveIds: [buyer.id, seller.id] });
+      return window.DomainTrade.applyGoldForItemTrade(buyer, seller, itemProp, priceRaw, {
+        isSameCell,
+        canAddItemType,
+        getShopItemById: (id) => SHOP_ITEMS.find((entry) => entry.id === id),
+        getShopItemName,
+        formatGold,
+        logEvent,
+        pushHistory,
+        markPlayerDirty,
+        queueRenderFromDirty
+      });
     }
-
     function renderShopPlayerInventory() {
       const player = state.players.find((entry) => entry.id === shopBuyerSelectEl.value) || null;
       if (!player) {
@@ -2832,122 +2713,52 @@ function rafDebounceSyncScale() {
     }
 
     function createFortuneQuest(player) {
-      const roll = Math.random();
-      const cellTypeChoices = ["shop", "blackMarket", "altar", "fortuneTeller"];
-      const itemChoices = [
-        { key: "boots", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "boots")) },
-        { key: "shields", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "shield")) },
-        { key: "luckCharm", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "luckCharm")) },
-        { key: "adrenaline", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "adrenaline")) },
-        { key: "trapKit", label: getShopItemName(SHOP_ITEMS.find((item) => item.id === "trapKit")) }
-      ];
-      const omenGoodChance = clamp(Number(CHANCES.fortune.omenGoodChance) + getLuckTalismanBonus(player), 0, 0.95);
-      const omenType = Math.random() < omenGoodChance ? "good" : "bad";
-      const omenLabel = omenType === "good" ? t("ui.omenGood") : t("ui.omenBad");
-
-      if (roll < CHANCES.fortune.questType.reachCellMax) {
-        const targetCell = clamp(player.position + randomInt(4, 12), 2, LAST_CELL);
-        const stepHint = Math.max(1, targetCell - player.position);
-        return {
-          omenType,
-          omenLabel,
-          type: "reachCell",
-          targetCell,
-          stepHint,
-          description: t("quest.reachCell", { targetCell })
-        };
-      }
-
-      if (roll < CHANCES.fortune.questType.itemOnCellTypeMax) {
-        const item = itemChoices[randomInt(0, itemChoices.length - 1)];
-        const cellType = cellTypeChoices[randomInt(0, cellTypeChoices.length - 1)];
-        return {
-          omenType,
-          omenLabel,
-          type: "itemOnCellType",
-          requiredItem: item.key,
-          requiredItemLabel: item.label,
-          requiredCellType: cellType,
-          requiredCellTypeLabel: getCellTypeLabel(cellType),
-          description: t("quest.itemOnCellType", { item: item.label, cellTypeLabel: getCellTypeLabel(cellType) })
-        };
-      }
-
-      const goldTarget = randomInt(90, 150);
-      const cellType = cellTypeChoices[randomInt(0, cellTypeChoices.length - 1)];
-      return {
-        omenType,
-        omenLabel,
-        type: "goldOnCellType",
-        minGold: goldTarget,
-        requiredCellType: cellType,
-        requiredCellTypeLabel: getCellTypeLabel(cellType),
-        description: t("quest.goldOnCellType", { minGold: goldTarget, cellTypeLabel: getCellTypeLabel(cellType) })
-      };
+      return window.DomainFortune.createFortuneQuest(player, {
+        random: Math.random,
+        randomInt,
+        clamp,
+        t,
+        getLuckTalismanBonus,
+        getCellTypeLabel,
+        getShopItemNameById: (id) => getShopItemName(SHOP_ITEMS.find((item) => item.id === id)),
+        chances: CHANCES,
+        lastCell: LAST_CELL
+      });
     }
 
     function isFortuneQuestCompleted(player, quest) {
-      if (!quest) return false;
-      if (quest.type === "reachCell") return player.position === quest.targetCell;
-      if (quest.type === "itemOnCellType") {
-        return (player[quest.requiredItem] || 0) > 0 && hasCellType(player.position, quest.requiredCellType);
-      }
-      if (quest.type === "goldOnCellType") {
-        return player.gold >= quest.minGold && hasCellType(player.position, quest.requiredCellType);
-      }
-      return false;
+      return window.DomainFortune.isFortuneQuestCompleted(player, quest, { hasCellType });
     }
 
     function resolveFortuneQuestReward(player, quest) {
-      if (quest?.omenType === "bad") {
-        const maxGoldLoss = Math.max(15, Math.round(REWARDS.fortuneGoldReward * 0.5));
-        const maxHpDamage = Math.max(6, Math.round((player.maxHp || PLAYER_MAX_HP || 100) * 0.1));
-        const result = FortuneActions.applyFortunePenaltyState({
-          player,
-          roll: Math.random(),
-          maxGoldLoss,
-          maxHpDamage
-        });
-        if (!result.ok) return;
-
-        updatePlayerInState(player.id, result.player);
-        if (result.penalty === "gold") {
-          logEvent(t("ui.prophecyBadGold", { name: player.name, loss: formatGold(result.goldLoss) }));
-          return;
-        }
-
-        logEvent(t("ui.prophecyBadHp", { name: player.name, damage: result.hpDamage, before: result.hpBefore, after: result.hpAfter }));
-        if ((result.player.hp || 0) <= 0) {
-          eliminatePlayerFromGame(result.player, "prophecy drained their life");
-        }
-        return;
-      }
-
-      const result = FortuneActions.applyFortuneRewardState({
-        player,
-        rewardRoll: Math.random(),
-        goldChanceMax: CHANCES.fortune.reward.goldMax,
-        shieldChanceMax: CHANCES.fortune.reward.shieldMax,
-        goldReward: REWARDS.fortuneGoldReward
+      return window.DomainFortune.resolveFortuneQuestReward(player, quest, {
+        random: Math.random,
+        rewards: REWARDS,
+        chances: CHANCES,
+        playerMaxHp: PLAYER_MAX_HP,
+        fortuneActions: FortuneActions,
+        updatePlayerInState,
+        eliminatePlayerFromGame,
+        logEvent,
+        t,
+        formatGold
       });
-      if (!result.ok) return;
-
-      updatePlayerInState(player.id, result.player);
-      if (result.reward === "gold") {
-        logEvent(`${player.name} receives a prophecy reward of +${formatGold(result.gold)}.`);
-        return;
-      }
-      if (result.reward === "shield") {
-        logEvent(`${player.name} receives +1 Protection Seal.`);
-        return;
-      }
-      logEvent(`${player.name} receives +1 Ritual Greaves.`);
     }
 
     function tryResolveFortuneQuest(player) {
-      if (!player?.fortuneQuest) return;
-      if (!isFortuneQuestCompleted(player, player.fortuneQuest)) return;
-      resolveFortuneQuestReward(player, player.fortuneQuest);
+      return window.DomainFortune.tryResolveFortuneQuest(player, {
+        hasCellType,
+        random: Math.random,
+        rewards: REWARDS,
+        chances: CHANCES,
+        playerMaxHp: PLAYER_MAX_HP,
+        fortuneActions: FortuneActions,
+        updatePlayerInState,
+        eliminatePlayerFromGame,
+        logEvent,
+        t,
+        formatGold
+      });
     }
 
     function renderAltarPlayerInfo() {
@@ -3008,114 +2819,33 @@ function rafDebounceSyncScale() {
     }
 
     function packPlayer(player) {
-      return {
-        i: player.id,
-        n: player.name,
-        p: player.position,
-        av: player.avatar || "",
-        h: player.hp,
-        mh: player.maxHp,
-        g: player.gold,
-        b: player.boots,
-        s: player.shields,
-        l: player.luckCharm,
-        ad: player.adrenaline,
-        shp: player.smallHealPotion,
-        t: player.trapKit,
-        r: player.rerollStone,
-        lt: player.lotteryTicket,
-        a: player.alchemyCrystal,
-        fc: player.fakeCrystal,
-        fch: player.fateChalice,
-        cin: player.cleansingIncense,
-        ba: player.bootsActive ? 1 : 0,
-        tb: Number(player.tradeBlockedTurns) || 0,
-        ci: player.cursedItemId || "",
-        ct: Number(player.cursedItemTurns) || 0,
-        fq: player.fortuneQuest || null,
-        fi: player.finished ? 1 : 0,
-        fo: Number(player.finishOrder) || 0
-      };
+      return window.InfraStorage.packPlayer(player);
     }
 
     function unpackPlayer(raw) {
-      if (!raw || typeof raw !== "object") return null;
-      if ("id" in raw) return raw;
-      return {
-        id: String(raw.i || ""),
-        name: String(raw.n || ""),
-        avatar: String(raw.av || ""),
-        position: Number(raw.p) || 1,
-        hp: Number(raw.h),
-        maxHp: Number(raw.mh),
-        gold: Number(raw.g) || 0,
-        boots: Number(raw.b) || 0,
-        shields: Number(raw.s) || 0,
-        luckCharm: Number(raw.l) || 0,
-        adrenaline: Number(raw.ad) || 0,
-        smallHealPotion: Number(raw.shp) || 0,
-        trapKit: Number(raw.t) || 0,
-        rerollStone: Number(raw.r) || 0,
-        lotteryTicket: Number(raw.lt) || 0,
-        alchemyCrystal: Number(raw.a) || 0,
-        fakeCrystal: Number(raw.fc) || 0,
-        fateChalice: Number(raw.fch) || 0,
-        cleansingIncense: Number(raw.cin) || 0,
-        bootsActive: Boolean(raw.ba),
-        tradeBlockedTurns: Math.max(0, Number(raw.tb) || 0),
-        cursedItemId: String(raw.ci || ""),
-        cursedItemTurns: Math.max(0, Number(raw.ct) || 0),
-        fortuneQuest: raw.fq && typeof raw.fq === "object" ? { ...raw.fq } : null,
-        finished: Boolean(raw.fi),
-        finishOrder: Number(raw.fo) || 0
-      };
+      return window.InfraStorage.unpackPlayer(raw);
     }
 
     function packCell(cell) {
-      return [cell.number, Array.isArray(cell.types) ? cell.types : []];
+      return window.InfraStorage.packCell(cell);
     }
 
     function unpackCell(raw, index) {
-      if (Array.isArray(raw)) {
-        return { number: Number(raw[0]) || index + 1, types: normalizeCellTypes(raw[1], Number(raw[0]) || index + 1) };
-      }
-      const number = index + 1;
-      const rawTypes = Array.isArray(raw?.types)
-        ? raw.types
-        : (typeof raw?.type === "string" && raw.type !== "normal" ? [raw.type] : []);
-      return { number, types: normalizeCellTypes(rawTypes, number) };
+      return window.InfraStorage.unpackCell(raw, index, { normalizeCellTypes });
     }
 
     function packSnapshot(snapshot) {
-      return {
-        v: snapshot.v || STATE_VERSION,
-        p: snapshot.players.map(packPlayer),
-        c: snapshot.cells.map(packCell),
-        sp: snapshot.selectedPlayerId,
-        sc: snapshot.selectedCell,
-        ti: snapshot.turnIndex,
-        ge: snapshot.gameEnded ? 1 : 0,
-        le: snapshot.logEntries
-          .map((entry) => normalizeLogEntry(entry))
-          .filter(Boolean)
-          .map((entry) => ({ t: entry.at, m: entry.text }))
-      };
+      return window.InfraStorage.packSnapshot(snapshot, {
+        stateVersion: STATE_VERSION,
+        normalizeLogEntry
+      });
     }
 
     function unpackSnapshot(parsed) {
-      if (!parsed || typeof parsed !== "object") return null;
-      if (Array.isArray(parsed.players)) return parsed;
-      if (!Array.isArray(parsed.p)) return null;
-      return {
-        v: Number(parsed.v) || 1,
-        players: parsed.p.map(unpackPlayer).filter(Boolean),
-        cells: Array.isArray(parsed.c) ? parsed.c.map((cell, index) => unpackCell(cell, index)) : [],
-        selectedPlayerId: typeof parsed.sp === "string" ? parsed.sp : "",
-        selectedCell: Number(parsed.sc) || 1,
-        turnIndex: Number(parsed.ti) || 0,
-        logEntries: Array.isArray(parsed.le) ? parsed.le.map((entry) => normalizeLogEntry(entry)).filter(Boolean) : [],
-        gameEnded: Boolean(parsed.ge)
-      };
+      return window.InfraStorage.unpackSnapshot(parsed, {
+        normalizeCellTypes,
+        normalizeLogEntry
+      });
     }
 
     function saveGameState(silent = false, force = false, sessionId = "") {
@@ -3161,12 +2891,7 @@ function rafDebounceSyncScale() {
     }
 
     function isValidLoadedPlayer(player) {
-      if (!player || typeof player !== "object") return false;
-      if (typeof player.id !== "string" || typeof player.name !== "string") return false;
-      if (!Number.isFinite(player.position) || !Number.isFinite(player.gold)) return false;
-      if ("hp" in player && !Number.isFinite(Number(player.hp))) return false;
-      if ("maxHp" in player && !Number.isFinite(Number(player.maxHp))) return false;
-      return true;
+      return window.InfraStorage.isValidLoadedPlayer(player);
     }
 
     function loadGameState(silent = false, sessionId = "") {
@@ -3209,6 +2934,7 @@ function rafDebounceSyncScale() {
         smallHealPotion: Math.max(0, Number(player.smallHealPotion) || 0),
         trapKit: Math.max(0, Number(player.trapKit) || 0),
         rerollStone: Math.max(0, Number(player.rerollStone) || 0),
+        unstablePortal: Math.max(0, Number(player.unstablePortal) || 0),
         lotteryTicket: Math.max(0, Number(player.lotteryTicket) || 0),
         alchemyCrystal: Math.max(0, Number(player.alchemyCrystal) || 0),
         fakeCrystal: Math.max(0, Number(player.fakeCrystal) || 0),
@@ -3467,43 +3193,23 @@ function rafDebounceSyncScale() {
     }
 
     function normalizeCellTypes(rawTypes, number = 1) {
-      const allowed = new Set(["trap", "shop", "blackMarket", "altar", "fortuneTeller", "lottery", "finish"]);
-      const uniq = new Set();
-      (Array.isArray(rawTypes) ? rawTypes : []).forEach((type) => {
-        if (type === "lottery") type = "fortuneTeller";
-        if (allowed.has(type)) uniq.add(type);
-      });
-      if (number === LAST_CELL) uniq.add("finish");
-      return Array.from(uniq);
+      return window.DomainBoard.normalizeCellTypes(rawTypes, number, { lastCell: LAST_CELL });
     }
 
     function getCellTypes(cellNumber) {
-      const cell = state.cells[cellNumber - 1];
-      if (!cell) return [];
-      if (Array.isArray(cell.types)) return normalizeCellTypes(cell.types, cellNumber);
-      if (typeof cell.type === "string" && cell.type !== "normal") return normalizeCellTypes([cell.type], cellNumber);
-      return [];
+      return window.DomainBoard.getCellTypes(state.cells, cellNumber, { lastCell: LAST_CELL });
     }
 
     function hasCellType(cellNumber, type) {
-      return getCellTypes(cellNumber).includes(type);
+      return window.DomainBoard.hasCellType(state.cells, cellNumber, type, { lastCell: LAST_CELL });
     }
 
     function getPrimaryCellType(types) {
-      if (types.includes("finish")) return "finish";
-      if (types.includes("trap")) return "trap";
-      if (types.includes("shop")) return "shop";
-      if (types.includes("blackMarket")) return "blackMarket";
-      if (types.includes("altar")) return "altar";
-      if (types.includes("fortuneTeller")) return "fortuneTeller";
-      return "normal";
+      return window.DomainBoard.getPrimaryCellType(types);
     }
 
     function getCellBackgroundStyle(types) {
-      if (!types.length) return "";
-      if (types.length === 1) return "";
-      const palette = types.map((type) => CELL_TYPE_COLORS[type]).filter(Boolean);
-      return `linear-gradient(135deg, ${palette.join(", ")})`;
+      return window.DomainBoard.getCellBackgroundStyle(types, { cellTypeColors: CELL_TYPE_COLORS });
     }
 
 function createBoard() {
@@ -3696,6 +3402,7 @@ function createBoard() {
         player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
+        player.unstablePortal,
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
@@ -3773,7 +3480,7 @@ function createBoard() {
     }
 
     function getCellTypeIcon(type) {
-      return (CELL_TYPE_META[type] || CELL_TYPE_META.normal || {}).icon || "вЂў";
+      return (CELL_TYPE_META[type] || CELL_TYPE_META.normal || {}).icon || "РІР‚Сћ";
     }
 
     function selectedPlayer() {
@@ -3984,6 +3691,7 @@ function createBoard() {
         player.smallHealPotion,
         player.trapKit,
         player.rerollStone,
+        player.unstablePortal,
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
@@ -4121,6 +3829,48 @@ function createBoard() {
         return;
       }
 
+      if (itemId === "unstablePortal") {
+        if (player.unstablePortal < 1) return;
+        pushHistory("Use item: Unstable portal");
+        player.unstablePortal -= 1;
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        state.rolling = true;
+        queueRender({
+          players: true,
+          stats: true,
+          selectedTile: true,
+          refreshInventoryOverlay: true,
+          refreshContextMenu: true,
+          tokensFull: true
+        });
+
+        const shift = randomInt(-5, 5);
+        const from = player.position;
+        const to = clamp(player.position + shift, 1, LAST_CELL);
+        logEvent(`${player.name} tears open an Unstable Portal: shift ${shift >= 0 ? "+" : ""}${shift}. Move: ${from} -> ${to}.`);
+        await movePlayerAnimated(player, to);
+        await resolveCellEffects(player);
+        tickTemporaryEffects(player);
+
+        state.rolling = false;
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        queueRenderFromDirty({ autosave: true, selectedTile: true });
+        return;
+      }
+
+      if (itemId === "fateChalice") {
+        if (player.fateChalice < 1) return;
+        if (!player.fortuneQuest) return;
+        pushHistory("Use item: Chalice of Change");
+        player.fateChalice -= 1;
+        player.fortuneQuest = null;
+        markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+        logEvent(`${player.name} drinks from the Chalice of Change and erases the imposed fate.`);
+        emitGameEvent("item-used", { playerId: player.id, itemId: "fateChalice", removedEffect: "oracleProphecy" });
+        queueRenderFromDirty({ autosave: true });
+        return;
+      }
+
       if (itemId === "cleansingIncense") {
         if (player.cleansingIncense < 1) return;
         const removable = [];
@@ -4142,6 +3892,7 @@ function createBoard() {
         }
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
         logEvent(`${player.name} uses Cleansing Incense and removes one negative effect.`);
+        emitGameEvent("item-used", { playerId: player.id, itemId: "cleansingIncense", removedEffect: picked });
         queueRenderFromDirty({ autosave: true });
       }
     }
@@ -4275,29 +4026,11 @@ function createBoard() {
     }
 
     function getFortuneQuestConditionText(quest) {
-      if (!quest) return "";
-      if (quest.type === "reachCell") {
-        return t("quest.reachCellHint", { stepHint: quest.stepHint || "several" });
-      }
-      if (quest.type === "itemOnCellType") {
-        return t("quest.itemOnCellType", { item: quest.requiredItemLabel, cellTypeLabel: quest.requiredCellTypeLabel });
-      }
-      if (quest.type === "goldOnCellType") {
-        return t("quest.goldOnCellType", { minGold: quest.minGold, cellTypeLabel: quest.requiredCellTypeLabel });
-      }
-      return quest.description || "";
+      return window.DomainFortune.getFortuneQuestConditionText(quest, { t });
     }
 
     function getFortuneQuestDebugConditionText(quest) {
-      if (!quest) return "";
-      if (quest.type === "reachCell") return t("quest.reachCellDebug", { targetCell: quest.targetCell });
-      if (quest.type === "itemOnCellType") {
-        return t("quest.itemOnCellTypeDebug", { item: quest.requiredItemLabel, cellTypeLabel: quest.requiredCellTypeLabel });
-      }
-      if (quest.type === "goldOnCellType") {
-        return t("quest.goldOnCellTypeDebug", { minGold: quest.minGold, cellTypeLabel: quest.requiredCellTypeLabel });
-      }
-      return quest.description || "";
+      return window.DomainFortune.getFortuneQuestDebugConditionText(quest, { t });
     }
 
     function buildEffectsPanelHtml(player) {
@@ -4393,6 +4126,7 @@ function createBoard() {
         player.adrenaline,
         player.trapKit,
         player.rerollStone,
+        player.unstablePortal,
         player.lotteryTicket,
         player.alchemyCrystal,
         player.fakeCrystal,
@@ -4850,21 +4584,21 @@ function createBoard() {
     }
 
     function setupTutorial() {
-      if (!window.TutorialManager) return;
-      tutorialManager = new window.TutorialManager({
-        api: {
-          queueNextTutorialMode: (mode) => {
-            queuedTutorialMode = normalizeTutorialMode(mode);
-          },
-          openContextForSelectedPlayer: openTutorialContextForSelectedPlayer,
-          focusSelectedPlayerCell: focusSelectedPlayerCellForTutorial,
-          closeContext: hideTileContextMenu,
-          closeInventory: closeInventoryOverlay,
-          prepareTutorialTradeScenario,
-          prepareTutorialSystemsScenario,
-          setTutorialRollPlan,
-          prepareTutorialRollTarget
-        }
+      tutorialManager = window.TutorialBridge.setupTutorial({
+        queueNextTutorialMode: (mode) => {
+          queuedTutorialMode = normalizeTutorialMode(mode);
+        },
+        openContextForSelectedPlayer: openTutorialContextForSelectedPlayer,
+        focusSelectedPlayerCell: focusSelectedPlayerCellForTutorial,
+        closeContext: hideTileContextMenu,
+        closeInventory: closeInventoryOverlay,
+        closeTrade: closeTradeOverlay,
+        prepareTutorialTradeScenario,
+        prepareTutorialSystemsScenario,
+        prepareTutorialCurseRemovalScenario,
+        prepareTutorialOracleRemovalScenario,
+        setTutorialRollPlan,
+        prepareTutorialRollTarget
       });
     }
 
@@ -4896,6 +4630,9 @@ function createBoard() {
 
       if (owner.gold < 5) owner.gold = 5;
       if (partner.gold < 5) partner.gold = 5;
+      owner.fateChalice = 0;
+      owner.cleansingIncense = 0;
+      partner.fateChalice = Math.max(1, Number(partner.fateChalice) || 0);
       partner.cleansingIncense = Math.max(1, Number(partner.cleansingIncense) || 0);
       tradeTargetByPlayerId.set(owner.id, partner.id);
       markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
@@ -4947,6 +4684,31 @@ function createBoard() {
       markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       markPlayerDirty(partner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
       queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id, partner.id] });
+    }
+
+    async function prepareTutorialCurseRemovalScenario() {
+      if (!isTutorialActive()) return;
+      const owner = selectedPlayer() || state.players[0] || null;
+      if (!owner) return;
+      owner.cursedItemId = "boots";
+      owner.cursedItemTurns = Math.max(2, Number(owner.cursedItemTurns) || 0);
+      owner.tradeBlockedTurns = 0;
+      owner.fortuneQuest = null;
+      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id] });
+    }
+
+    async function prepareTutorialOracleRemovalScenario() {
+      if (!isTutorialActive()) return;
+      const owner = selectedPlayer() || state.players[0] || null;
+      if (!owner) return;
+      owner.cursedItemId = "";
+      owner.cursedItemTurns = 0;
+      owner.tradeBlockedTurns = 0;
+      owner.fateChalice = Math.max(1, Number(owner.fateChalice) || 0);
+      owner.fortuneQuest = createFortuneQuest(owner);
+      markPlayerDirty(owner.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+      queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [owner.id] });
     }
 
     // Tutorial starts on "New game" flow (see reset handlers).
@@ -5504,6 +5266,7 @@ function createBoard() {
         smallHealPotion: { shopId: "smallHealPotion", prop: SHOP_ITEM_TO_PROP.smallHealPotion },
         trapKit: { shopId: "trapKit", prop: SHOP_ITEM_TO_PROP.trapKit },
         rerollStone: { shopId: "rerollStone", prop: SHOP_ITEM_TO_PROP.rerollStone },
+        unstablePortal: { shopId: "unstablePortal", prop: SHOP_ITEM_TO_PROP.unstablePortal },
         lotteryTicket: { shopId: "lotteryTicket", prop: SHOP_ITEM_TO_PROP.lotteryTicket },
         alchemyCrystal: { shopId: "alchemyCrystal", prop: SHOP_ITEM_TO_PROP.alchemyCrystal },
         fakeCrystal: { shopId: "fakeCrystal", prop: SHOP_ITEM_TO_PROP.fakeCrystal },
@@ -6122,19 +5885,20 @@ function createBoard() {
           const target = state.players.find((entry) => entry.id === targetId) || null;
           if (!target) return;
 
-          const success = applyUnifiedTrade(owner, target, {
+          const tradeDraft = {
             giveItems: giveItemEls.map((el) => String(el.dataset.tradeItem || "")).filter(Boolean),
             giveGold: Number(giveGoldEl?.value || 0),
             getItems: getItemEls.map((el) => String(el.dataset.tradeItem || "")).filter(Boolean),
             getGold: Number(getGoldEl?.value || 0)
-          });
+          };
+          const success = applyUnifiedTrade(owner, target, tradeDraft);
           if (success) {
             const sealEl = tradeBodyEl.querySelector("[data-trade-seal]");
             if (sealEl) {
               sealEl.classList.add("active");
               window.setTimeout(() => sealEl.classList.remove("active"), 850);
             }
-            emitGameEvent("trade-sealed", { ownerId: owner.id, targetId: target.id });
+            emitGameEvent("trade-sealed", { ownerId: owner.id, targetId: target.id, ...tradeDraft });
           }
           return;
         }
@@ -6396,4 +6160,6 @@ function createBoard() {
     }
 
     init();
+
+
 

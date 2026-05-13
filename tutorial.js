@@ -34,23 +34,7 @@
   }
 
   function waitForEvent(name, predicate = null) {
-    return new Promise((resolve) => {
-      const cleanup = () => {
-        document.removeEventListener(name, onEvent);
-        document.removeEventListener("tutorial:cancel", onCancel);
-      };
-      const onEvent = (event) => {
-        if (predicate && !predicate(event.detail || {})) return;
-        cleanup();
-        resolve(event.detail || {});
-      };
-      const onCancel = () => {
-        cleanup();
-        resolve({ cancelled: true });
-      };
-      document.addEventListener(name, onEvent);
-      document.addEventListener("tutorial:cancel", onCancel);
-    });
+    return global.InfraEvents.waitForEvent(name, predicate, { cancelEvent: "tutorial:cancel" });
   }
 
   class TutorialManager {
@@ -499,6 +483,27 @@
           _id: "tutorial.effects.title",
           title: t("tutorial.effects.title"),
           body: t("tutorial.effects.body"),
+          target: ".effects-panel .effect-item, .inventory-modal .effect-item, .effects-panel, .inventory-modal .inventory-body",
+          scroll: false
+        },
+        {
+          _id: "tutorial.effectsName.title",
+          title: t("tutorial.effectsName.title"),
+          body: t("tutorial.effectsName.body"),
+          target: ".effects-panel .effect-item .effect-name, .inventory-modal .effect-item .effect-name",
+          scroll: false
+        },
+        {
+          _id: "tutorial.effectsDesc.title",
+          title: t("tutorial.effectsDesc.title"),
+          body: t("tutorial.effectsDesc.body"),
+          target: ".effects-panel .effect-item.bad-event .effect-desc, .inventory-modal .effect-item.bad-event .effect-desc, .effects-panel .effect-item .effect-desc, .inventory-modal .effect-item .effect-desc",
+          scroll: false
+        },
+        {
+          _id: "tutorial.effectRemoval.title",
+          title: t("tutorial.effectRemoval.title"),
+          body: t("tutorial.effectRemoval.body"),
           target: ".effects-panel, .effects-title, .inventory-modal .inventory-body",
           scroll: false
         },
@@ -531,7 +536,40 @@
           action: async () => {
             await waitFrame();
           },
-          waitFor: () => waitForEvent("game:trade-sealed")
+          waitFor: () => waitForEvent("game:trade-sealed", (detail) => {
+            const getItems = Array.isArray(detail?.getItems) ? detail.getItems : [];
+            return getItems.includes("fateChalice") && getItems.includes("cleansingIncense");
+          })
+        },
+        {
+          _id: "tutorial.effectsPracticeOpen.title",
+          title: t("tutorial.effectsPracticeOpen.title"),
+          body: t("tutorial.effectsPracticeOpen.body"),
+          target: ".token.active [data-open-inventory], .token [data-open-inventory]",
+          before: async () => {
+            this.api.closeTrade?.();
+            await this.api.prepareTutorialCurseRemovalScenario?.();
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:inventory-opened")
+        },
+        {
+          _id: "tutorial.effectsPracticeIncense.title",
+          title: t("tutorial.effectsPracticeIncense.title"),
+          body: t("tutorial.effectsPracticeIncense.body"),
+          target: ".inventory-modal [data-use-item=\"cleansingIncense\"], .inventory-modal [data-inv-item-id=\"cleansingIncense\"]",
+          waitFor: () => waitForEvent("game:item-used", (detail) => detail.itemId === "cleansingIncense" && detail.removedEffect === "cursedItem")
+        },
+        {
+          _id: "tutorial.effectsPracticeChalice.title",
+          title: t("tutorial.effectsPracticeChalice.title"),
+          body: t("tutorial.effectsPracticeChalice.body"),
+          target: ".inventory-modal [data-use-item=\"fateChalice\"], .inventory-modal [data-inv-item-id=\"fateChalice\"]",
+          before: async () => {
+            await this.api.prepareTutorialOracleRemovalScenario?.();
+            await waitFrame();
+          },
+          waitFor: () => waitForEvent("game:item-used", (detail) => detail.itemId === "fateChalice" && detail.removedEffect === "oracleProphecy")
         },
         {
           _id: "tutorial.keeper.title",
@@ -604,9 +642,15 @@
         systems: [
           "tutorial.inventory.title",
           "tutorial.effects.title",
+          "tutorial.effectsName.title",
+          "tutorial.effectsDesc.title",
+          "tutorial.effectRemoval.title",
           "tutorial.tradeOpen.title",
           "tutorial.tradeMenu.title",
           "tutorial.tradeFunctions.title",
+          "tutorial.effectsPracticeOpen.title",
+          "tutorial.effectsPracticeIncense.title",
+          "tutorial.effectsPracticeChalice.title",
           "tutorial.keeper.title",
           "tutorial.logs.title",
           "tutorial.done.title"

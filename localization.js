@@ -278,7 +278,7 @@
         lotteryTicket: { name: "Лотерейный билет", desc: "При использовании приносит случайную награду от 0 до 100 золота" },
         alchemyCrystal: { name: "Алмаз", desc: "Дорогой товар, который выгодно продать." },
         fakeCrystal: { name: "Поддельный алмаз", desc: "Продаётся по той же цене, что и алмаз." },
-        fateChalice: { name: "Чаша Перемен", desc: "Меняет навязанную судьбу на новую." },
+        fateChalice: { name: "Чаша Перемен", desc: "Стирает активное пророчество Оракула." },
         cleansingIncense: { name: "Очищающий Ладан", desc: "Снимает один случайный негативный эффект." }
       },
       cellTypes: {
@@ -328,7 +328,7 @@
         fortuneUseAction: "Открыть оракула",
         fortuneDo: { title: "Получить пророчество", body: "Меню Оракула открыто. Нажмите кнопку действия, чтобы получить пророчество." },
         inventory: { title: "Инвентарь", body: "Здесь видно HP, золото, предметы и их количество. Нажмите на предмет в слотах, чтобы использовать его, если условия позволяют." },
-        effects: { title: "Эффекты", body: "Панель эффектов показывает временные состояния игрока.\n\nДлительность смотрите прямо в карточке эффекта: строка с «{turns} хода» показывает, сколько ходов осталось.\n\nЭффекты снимаются автоматически, когда выполняется их условие или заканчивается длительность.\n\nПодробности всегда есть в логах: когда эффект наложен и когда снят." },
+        effects: { title: "Эффекты", body: "Панель эффектов показывает временные состояния игрока.\n\nДлительность смотрите прямо в карточке эффекта: строка с «{turns} хода» показывает, сколько ходов осталось.\n\nЭффекты снимаются автоматически, когда выполняется их условие или заканчивается длительность.\n\nЧаша Перемен стирает активное пророчество Оракула.\n\nПодробности всегда есть в логах: когда эффект наложен и когда снят." },
         tradeOpen: { title: "Обмен: открытие", body: "Для обучения рядом подготовлен второй игрок. Нажмите кнопку обмена (↔) в карточке активного игрока." },
         tradeOpenAction: "Открыть обмен",
         tradeMenu: { title: "Меню контракта", body: "В этом меню выбирается партнер, задается вклад каждой стороны (золото и предметы), и показываются текущие ресурсы обоих игроков." },
@@ -616,7 +616,7 @@
         lotteryTicket: { name: "Lottery ticket", desc: "When used, grants a random reward from 0 to 100 gold" },
         alchemyCrystal: { name: "Diamond", desc: "Valuable trade good with high resale value." },
         fakeCrystal: { name: "Counterfeit diamond", desc: "Sells for the same price as a diamond." },
-        fateChalice: { name: "Chalice of Change", desc: "Rewrites imposed fate into a new one." },
+        fateChalice: { name: "Chalice of Change", desc: "Erases the active Oracle prophecy." },
         cleansingIncense: { name: "Cleansing Incense", desc: "Removes one random negative effect." }
       },
       cellTypes: {
@@ -666,7 +666,7 @@
         fortuneUseAction: "Open Oracle",
         fortuneDo: { title: "Get a Prophecy", body: "The Oracle menu is open. Press the action button to receive a prophecy." },
         inventory: { title: "Inventory", body: "This panel shows HP, gold, items, and stack counts. Click item slots to use items when their conditions are met." },
-        effects: { title: "Effects", body: "The effects panel shows temporary states: roll bonuses, trap protection, and lockouts. Duration is shown inside each effect card: the “{turns} turns” line tells how many turns are left. How to remove effects: one-shot effects end after they trigger, turn-based effects expire automatically when their counter reaches 0, and ritual lockouts (such as Altar Chain) end after the required number of turns. Check the logs to see exactly when each effect is applied and removed." },
+        effects: { title: "Effects", body: "The effects panel shows temporary states: roll bonuses, trap protection, and lockouts. Duration is shown inside each effect card: the “{turns} turns” line tells how many turns are left. How to remove effects: one-shot effects end after they trigger, turn-based effects expire automatically when their counter reaches 0, and ritual lockouts (such as Altar Chain) end after the required number of turns. The Chalice of Change erases the active Oracle prophecy. Check the logs to see exactly when each effect is applied and removed." },
         tradeOpen: { title: "Trade: Open", body: "For this lesson, a second nearby player is prepared. Press the trade button (↔) on the active player's card." },
         tradeOpenAction: "Open Trade",
         tradeMenu: { title: "Contract Menu", body: "In this panel you pick a partner, configure what each side gives (gold and items), and see both players' current resources." },
@@ -955,7 +955,7 @@
         lotteryTicket: { name: "Лотерейний квиток", desc: "При використанні дає випадкову нагороду від 0 до 100 золота" },
         alchemyCrystal: { name: "Алмаз", desc: "Дорогий товар, який вигідно продати." },
         fakeCrystal: { name: "Підроблений алмаз", desc: "Підроблений алмаз продається за такою самою ціною, як і алмаз." },
-        fateChalice: { name: "Чаша Змін", desc: "Змінює нав'язану долю на нову." },
+        fateChalice: { name: "Чаша Змін", desc: "Стирає активне пророцтво Оракула." },
         cleansingIncense: { name: "Очищувальний Ладан", desc: "Знімає один випадковий негативний ефект." }
       },
       cellTypes: {
@@ -1005,7 +1005,7 @@
         fortuneUseAction: "Відкрити оракула",
         fortuneDo: { title: "Отримати пророцтво", body: "Меню Оракула відкрито. Натисніть кнопку дії, щоб отримати пророцтво." },
         inventory: { title: "Інвентар", body: "Тут видно HP, золото, предмети та їх кількість. Натискайте предмети у слотах, щоб використати їх, коли умови виконані." },
-        effects: { title: "Ефекти", body: "Панель ефектів показує тимчасові стани: бонуси до кидка, захист від пасток і блокування. Тривалість видно прямо в картці ефекту: рядок «{turns} ходи» показує, скільки ходів лишилось. Як знімати ефекти: одноразові зникають після спрацювання, ефекти з лічильником ходів знімаються автоматично на 0, а ритуальні блокування (наприклад, Ланцюг Вівтаря) минають після потрібної кількості ходів. Перевіряйте логи: там видно, коли ефект накладено і коли його знято." },
+        effects: { title: "Ефекти", body: "Панель ефектів показує тимчасові стани: бонуси до кидка, захист від пасток і блокування. Тривалість видно прямо в картці ефекту: рядок «{turns} ходи» показує, скільки ходів лишилось. Як знімати ефекти: одноразові зникають після спрацювання, ефекти з лічильником ходів знімаються автоматично на 0, а ритуальні блокування (наприклад, Ланцюг Вівтаря) минають після потрібної кількості ходів. Чаша Змін стирає активне пророцтво Оракула. Перевіряйте логи: там видно, коли ефект накладено і коли його знято." },
         tradeOpen: { title: "Обмін: відкриття", body: "Для навчання поруч створено другого гравця. Натисніть кнопку обміну (↔) у картці активного гравця." },
         tradeOpenAction: "Відкрити обмін",
         tradeMenu: { title: "Меню контракту", body: "У меню ви обираєте партнера, налаштовуєте що віддає кожен бік (золото та предмети), і бачите поточні ресурси обох гравців." },
