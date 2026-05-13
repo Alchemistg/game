@@ -51,6 +51,14 @@
             <span data-i18n="ui.newGameNameLabel">Название игры/сохранения</span>
             <input id="newGameNameInput" type="text" maxlength="40" placeholder="Например: Вечерняя партия" data-i18n-placeholder="ui.newGameNamePlaceholder" />
           </label>
+          <div class="config-balance-title" data-i18n="ui.configPresetsTitle">Пресеты сложности</div>
+          <div class="config-presets">
+            <button id="configPresetEasyBtn" type="button" data-i18n="ui.configPresetEasy">Легко</button>
+            <button id="configPresetNormalBtn" type="button" data-i18n="ui.configPresetNormal">Норма</button>
+            <button id="configPresetHardBtn" type="button" data-i18n="ui.configPresetHard">Хард</button>
+            <button id="configPresetCustomBtn" type="button" data-i18n="ui.configPresetCustom">Кастомна</button>
+          </div>
+          <div id="customConfigPanel" class="settings-panel is-hidden">
           <label class="config-field">
             <span data-i18n="ui.configBoardSize">Размер поля</span>
             <input id="configBoardSize" type="number" min="5" max="20" step="1" />
@@ -74,6 +82,36 @@
           <label class="config-field">
             <span data-i18n="ui.configFinishersToEndGame">Финишеров для конца игры</span>
             <input id="configFinishersToEndGame" type="number" min="1" max="10" step="1" />
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configFortuneCost">Оракул: стоимость ритуала</span>
+            <input id="configFortuneCost" type="number" min="0" max="500" step="1" />
+            <small class="config-help" data-i18n="ui.configFortuneCostHelp">Сколько золота нужно заплатить за одно пророчество.</small>
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configBlackMarketCost">Теневой торг: стоимость сделки</span>
+            <input id="configBlackMarketCost" type="number" min="0" max="500" step="1" />
+            <small class="config-help" data-i18n="ui.configBlackMarketCostHelp">Цена одной покупки на Теневом торге.</small>
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configAltarCost">Алтарь: стоимость подношения</span>
+            <input id="configAltarCost" type="number" min="0" max="500" step="1" />
+            <small class="config-help" data-i18n="ui.configAltarCostHelp">Цена активации ритуала у Алтаря.</small>
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configSellFactor">Коэффициент продажи (%)</span>
+            <input id="configSellFactor" type="number" min="10" max="100" step="1" />
+            <small class="config-help" data-i18n="ui.configSellFactorHelp">Сколько % от цены предмета игрок получает при продаже.</small>
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configBlackMarketMaxLossGold">Макс. потери на Теневом торге</span>
+            <input id="configBlackMarketMaxLossGold" type="number" min="0" max="500" step="1" />
+            <small class="config-help" data-i18n="ui.configBlackMarketMaxLossGoldHelp">Верхний предел потерь золота при неудачной сделке.</small>
+          </label>
+          <label class="config-field">
+            <span data-i18n="ui.configAltarNoTributeMaxPenaltyGold">Макс. штраф без дара (Алтарь)</span>
+            <input id="configAltarNoTributeMaxPenaltyGold" type="number" min="0" max="500" step="1" />
+            <small class="config-help" data-i18n="ui.configAltarNoTributeMaxPenaltyGoldHelp">Максимальный штраф, если пытаться ритуал без подношения.</small>
           </label>
           <div class="config-balance-title" data-i18n="ui.configBalanceTitle">Баланс</div>
           <label class="config-range-field">
@@ -100,6 +138,7 @@
           <div id="configEditorStatus" class="config-editor-status" aria-live="polite"></div>
           <div class="session-picker-actions">
             <button id="resetConfigBtn" type="button" data-i18n="ui.configResetBtn">Сбросить к дефолту</button>
+          </div>
           </div>
         </div>
       </section>
@@ -209,7 +248,7 @@
         <h2 data-i18n="ui.selectedPlayerTitle">Избранник Круга</h2>
         <div id="playerStats" class="stats"></div>
         <div class="dice-widget">
-          <div class="dice-scene">
+          <div class="dice-scene" id="diceScene">
             <div class="dice-cube" id="diceCube" aria-hidden="true">
               <div class="dice-face dice-front"><span class="pip p5"></span></div>
               <div class="dice-face dice-back"><span class="pip p1"></span><span class="pip p3"></span><span class="pip p4"></span><span class="pip p6"></span><span class="pip p7"></span><span class="pip p9"></span></div>
@@ -217,6 +256,15 @@
               <div class="dice-face dice-left"><span class="pip p1"></span><span class="pip p3"></span><span class="pip p7"></span><span class="pip p9"></span></div>
               <div class="dice-face dice-top"><span class="pip p1"></span><span class="pip p9"></span></div>
               <div class="dice-face dice-bottom"><span class="pip p1"></span><span class="pip p3"></span><span class="pip p5"></span><span class="pip p7"></span><span class="pip p9"></span></div>
+            </div>
+            <div class="portal-visual" id="portalVisual" aria-hidden="true">
+              <div class="portal-ring"></div>
+              <div class="portal-ring portal-ring-mid"></div>
+              <div class="portal-ring portal-ring-inner"></div>
+              <div class="portal-core"></div>
+              <div class="portal-spark portal-spark-a"></div>
+              <div class="portal-spark portal-spark-b"></div>
+              <div class="portal-spark portal-spark-c"></div>
             </div>
           </div>
           <div id="diceResult" class="dice-result" data-i18n="ui.diceResultIdle">Результат: -</div>

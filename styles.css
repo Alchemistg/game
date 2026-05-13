@@ -1129,6 +1129,115 @@
       -webkit-backface-visibility: hidden;
     }
 
+    .dice-scene.portal-active .dice-cube {
+      opacity: 0.08;
+      transform: scale(0.84) rotateX(-18deg) rotateY(12deg);
+      filter: blur(1.2px);
+    }
+
+    .portal-visual {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 60px;
+      height: 60px;
+      opacity: 0;
+      transform: scale(0.72);
+      pointer-events: none;
+      transition: opacity 240ms ease, transform 240ms ease;
+    }
+
+    .dice-scene.portal-active .portal-visual {
+      opacity: 1;
+      transform: scale(1);
+      animation: portal-pulse 1100ms ease-in-out;
+    }
+
+    .portal-ring,
+    .portal-core {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+    }
+
+    .portal-ring {
+      border: 2px solid rgba(106, 217, 255, 0.7);
+      box-shadow: 0 0 8px rgba(64, 174, 255, 0.56), inset 0 0 6px rgba(17, 42, 84, 0.5);
+    }
+
+    .portal-ring-mid {
+      inset: 6px;
+      border-color: rgba(114, 157, 255, 0.8);
+    }
+
+    .portal-ring-inner {
+      inset: 12px;
+      border-color: rgba(188, 112, 255, 0.7);
+    }
+
+    .portal-core {
+      inset: 18px;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), rgba(176, 194, 255, 0.45) 42%, rgba(41, 19, 97, 0.9) 100%);
+      box-shadow: 0 0 16px rgba(120, 114, 255, 0.72);
+    }
+
+    .portal-spark {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(188, 235, 255, 0.92);
+      box-shadow: 0 0 10px rgba(131, 228, 255, 0.84);
+    }
+
+    .portal-spark-a { top: 3px; left: 25px; }
+    .portal-spark-b { top: 27px; right: 2px; animation-delay: 120ms; }
+    .portal-spark-c { bottom: 4px; left: 8px; animation-delay: 220ms; }
+
+    .dice-scene.portal-active .portal-ring {
+      animation: portal-spin 900ms linear 1;
+    }
+
+    .dice-scene.portal-active .portal-ring-mid {
+      animation-duration: 760ms;
+      animation-direction: reverse;
+    }
+
+    .dice-scene.portal-active .portal-ring-inner {
+      animation-duration: 620ms;
+    }
+
+    .dice-scene.portal-active .portal-core {
+      animation: portal-core-flicker 260ms ease-in-out 4 alternate;
+    }
+
+    .dice-scene.portal-active .portal-spark {
+      animation: portal-spark-orbit 720ms linear 1;
+    }
+
+    @keyframes portal-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes portal-pulse {
+      0% { filter: brightness(1) saturate(1); }
+      35% { filter: brightness(1.16) saturate(1.25); }
+      100% { filter: brightness(1) saturate(1); }
+    }
+
+    @keyframes portal-core-flicker {
+      from { transform: scale(0.95); opacity: 0.82; }
+      to { transform: scale(1.06); opacity: 1; }
+    }
+
+    @keyframes portal-spark-orbit {
+      from { transform: rotate(0deg) translateX(0px) scale(0.9); }
+      50% { transform: rotate(180deg) translateX(4px) scale(1.18); }
+      to { transform: rotate(360deg) translateX(0px) scale(0.9); }
+    }
+
     .dice-face {
       position: absolute;
       width: 60px;
@@ -1727,6 +1836,14 @@
       box-shadow: 0 0 0 2px rgba(217, 177, 76, 0.14);
     }
 
+    .config-help {
+      margin-top: 2px;
+      font-size: 0.72rem;
+      line-height: 1.35;
+      font-weight: 500;
+      color: rgba(232, 220, 190, 0.72);
+    }
+
     .config-menu-summary {
       font-size: 0.76rem;
       color: rgba(232, 220, 190, 0.74);
@@ -1758,6 +1875,14 @@
       font-size: 0.82rem;
       font-weight: 700;
       color: #e8dcc0;
+    }
+
+    .config-presets {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 2px;
+      margin-bottom: 2px;
     }
 
     .config-range-field input[type="range"] {
@@ -2450,6 +2575,13 @@
       }
 
       .dice-cube {
+        width: 54px;
+        height: 54px;
+        top: 5px;
+        left: 5px;
+      }
+
+      .portal-visual {
         width: 54px;
         height: 54px;
         top: 5px;

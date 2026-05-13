@@ -160,6 +160,17 @@ const state = {
     const configInventorySlotsEl = getEl('configInventorySlots');
     const configAutosaveDelayEl = getEl('configAutosaveDelay');
     const configFinishersToEndGameEl = getEl('configFinishersToEndGame');
+    const configFortuneCostEl = getEl('configFortuneCost');
+    const configBlackMarketCostEl = getEl('configBlackMarketCost');
+    const configAltarCostEl = getEl('configAltarCost');
+    const configSellFactorEl = getEl('configSellFactor');
+    const configBlackMarketMaxLossGoldEl = getEl('configBlackMarketMaxLossGold');
+    const configAltarNoTributeMaxPenaltyGoldEl = getEl('configAltarNoTributeMaxPenaltyGold');
+    const configPresetEasyBtnEl = getEl('configPresetEasyBtn');
+    const configPresetNormalBtnEl = getEl('configPresetNormalBtn');
+    const configPresetHardBtnEl = getEl('configPresetHardBtn');
+    const configPresetCustomBtnEl = getEl('configPresetCustomBtn');
+    const customConfigPanelEl = getEl('customConfigPanel');
     const configFortuneGoodChanceEl = getEl('configFortuneGoodChance');
     const configBlackMarketProfitChanceEl = getEl('configBlackMarketProfitChance');
     const configAltarShieldChanceEl = getEl('configAltarShieldChance');
@@ -212,7 +223,9 @@ const state = {
     const activePlayerCardEl = getEl('activePlayerCard');
     const playerStatsEl = getEl('playerStats');
     const rollBtnEl = getEl('rollBtn');
+    const diceSceneEl = getEl('diceScene');
     const diceCubeEl = getEl('diceCube');
+    const portalVisualEl = getEl('portalVisual');
     const diceResultEl = getEl('diceResult');
     const addGoldBtnEl = getEl('addGoldBtn');
     const removeGoldBtnEl = getEl('removeGoldBtn');
@@ -320,6 +333,7 @@ let perfSectionTimes = {};
     const MAX_INVENTORY_CACHE = 180;
     const effectsPanelCache = new Map();
     const MAX_EFFECTS_CACHE = 180;
+    const pendingPortalShiftByPlayerId = new Map();
     let diceRotationX = -30;
     let diceRotationY = 45;
     let autosaveDirty = false;
@@ -505,12 +519,21 @@ const DICE_ROTATIONS = {
     }
 
     function syncConfigMenu() {
+      // Не прячем кастомную панель принудительно: она управляется кнопкой/состоянием пресета.
+      // Иначе клик по "Кастомна" открывает панель, а тут же снова скрывает её.
+
       if (configBoardSizeEl) configBoardSizeEl.value = String(CONFIG.BOARD_SIZE || 10);
       if (configPlayerMaxHpEl) configPlayerMaxHpEl.value = String(CONFIG.PLAYER_MAX_HP || 100);
       if (configGoldPerMoveEl) configGoldPerMoveEl.value = String(CONFIG.GOLD_PER_MOVE || 10);
       if (configInventorySlotsEl) configInventorySlotsEl.value = String(CONFIG.INVENTORY_SLOT_LIMIT || 4);
       if (configAutosaveDelayEl) configAutosaveDelayEl.value = String(CONFIG.AUTOSAVE_DELAY_MS || 900);
       if (configFinishersToEndGameEl) configFinishersToEndGameEl.value = String(CONFIG.FINISHERS_TO_END_GAME || 1);
+      if (configFortuneCostEl) configFortuneCostEl.value = String(CONFIG.SERVICE_COSTS?.fortuneTeller || 25);
+      if (configBlackMarketCostEl) configBlackMarketCostEl.value = String(CONFIG.SERVICE_COSTS?.blackMarket || 30);
+      if (configAltarCostEl) configAltarCostEl.value = String(CONFIG.SERVICE_COSTS?.altar || 25);
+      if (configSellFactorEl) configSellFactorEl.value = String(Math.round((Number(CONFIG.SELL_FACTOR) || 0.5) * 100));
+      if (configBlackMarketMaxLossGoldEl) configBlackMarketMaxLossGoldEl.value = String(CONFIG.REWARDS?.blackMarketMaxLossGold || 35);
+      if (configAltarNoTributeMaxPenaltyGoldEl) configAltarNoTributeMaxPenaltyGoldEl.value = String(CONFIG.REWARDS?.altarNoTributeMaxPenaltyGold || 15);
       if (configFortuneGoodChanceEl) configFortuneGoodChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100));
       if (configBlackMarketProfitChanceEl) configBlackMarketProfitChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100));
       if (configAltarShieldChanceEl) configAltarShieldChanceEl.value = String(Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100));
@@ -519,6 +542,19 @@ const DICE_ROTATIONS = {
       setConfigEditorStatus("");
     }
 
+    function setCustomConfigPanelOpen(isOpen) {
+      if (!customConfigPanelEl) return;
+      customConfigPanelEl.classList.toggle("is-hidden", !Boolean(isOpen));
+    }
+
+    // Ensure Custom panel starts hidden on page load.
+    // It will be shown by applyConfigPreset("custom").
+    if (customConfigPanelEl) customConfigPanelEl.classList.add("is-hidden");
+    
+    // Keep the initial preset state consistent with the visible UI.
+    // Default should be: custom panel hidden until preset="custom" is applied.
+    // (We don't call applyConfigPreset here to avoid overriding user-chosen preset later.)
+
     function buildConfigOverridesFromInputs() {
       const boardSize = clampConfigNumber(getConfigInputValue(configBoardSizeEl, CONFIG.BOARD_SIZE || 10), 5, 20, CONFIG.BOARD_SIZE || 10);
       const playerMaxHp = clampConfigNumber(getConfigInputValue(configPlayerMaxHpEl, CONFIG.PLAYER_MAX_HP || 100), 10, 999, CONFIG.PLAYER_MAX_HP || 100);
@@ -526,6 +562,12 @@ const DICE_ROTATIONS = {
       const inventorySlots = clampConfigNumber(getConfigInputValue(configInventorySlotsEl, CONFIG.INVENTORY_SLOT_LIMIT || 4), 1, 10, CONFIG.INVENTORY_SLOT_LIMIT || 4);
       const autosaveDelay = clampConfigNumber(getConfigInputValue(configAutosaveDelayEl, CONFIG.AUTOSAVE_DELAY_MS || 900), 100, 5000, CONFIG.AUTOSAVE_DELAY_MS || 900);
       const finishers = clampConfigNumber(getConfigInputValue(configFinishersToEndGameEl, CONFIG.FINISHERS_TO_END_GAME || 1), 1, 10, CONFIG.FINISHERS_TO_END_GAME || 1);
+      const fortuneCost = clampConfigNumber(getConfigInputValue(configFortuneCostEl, CONFIG.SERVICE_COSTS?.fortuneTeller || 25), 0, 500, CONFIG.SERVICE_COSTS?.fortuneTeller || 25);
+      const blackMarketCost = clampConfigNumber(getConfigInputValue(configBlackMarketCostEl, CONFIG.SERVICE_COSTS?.blackMarket || 30), 0, 500, CONFIG.SERVICE_COSTS?.blackMarket || 30);
+      const altarCost = clampConfigNumber(getConfigInputValue(configAltarCostEl, CONFIG.SERVICE_COSTS?.altar || 25), 0, 500, CONFIG.SERVICE_COSTS?.altar || 25);
+      const sellFactor = clampConfigNumber(getConfigInputValue(configSellFactorEl, Math.round((Number(CONFIG.SELL_FACTOR) || 0.5) * 100)), 10, 100, Math.round((Number(CONFIG.SELL_FACTOR) || 0.5) * 100)) / 100;
+      const blackMarketMaxLossGold = clampConfigNumber(getConfigInputValue(configBlackMarketMaxLossGoldEl, CONFIG.REWARDS?.blackMarketMaxLossGold || 35), 0, 500, CONFIG.REWARDS?.blackMarketMaxLossGold || 35);
+      const altarNoTributeMaxPenaltyGold = clampConfigNumber(getConfigInputValue(configAltarNoTributeMaxPenaltyGoldEl, CONFIG.REWARDS?.altarNoTributeMaxPenaltyGold || 15), 0, 500, CONFIG.REWARDS?.altarNoTributeMaxPenaltyGold || 15);
       const fortuneGoodChance = clampConfigNumber(getConfigInputValue(configFortuneGoodChanceEl, Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0) * 100)) / 100;
       const blackMarketProfitChance = clampConfigNumber(getConfigInputValue(configBlackMarketProfitChanceEl, Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0) * 100)) / 100;
       const altarShieldChance = clampConfigNumber(getConfigInputValue(configAltarShieldChanceEl, Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100)), 0, 100, Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0) * 100)) / 100;
@@ -537,6 +579,16 @@ const DICE_ROTATIONS = {
         INVENTORY_SLOT_LIMIT: inventorySlots,
         AUTOSAVE_DELAY_MS: autosaveDelay,
         FINISHERS_TO_END_GAME: finishers,
+        SELL_FACTOR: sellFactor,
+        SERVICE_COSTS: {
+          fortuneTeller: fortuneCost,
+          blackMarket: blackMarketCost,
+          altar: altarCost
+        },
+        REWARDS: {
+          blackMarketMaxLossGold,
+          altarNoTributeMaxPenaltyGold
+        },
         CHANCES: {
           fortune: { omenGoodChance: fortuneGoodChance },
           blackMarket: { profitMax: blackMarketProfitChance },
@@ -544,6 +596,94 @@ const DICE_ROTATIONS = {
         }
       };
       return overrides;
+    }
+
+    function applyConfigPreset(preset) {
+      // custom-панель должна строго соответствовать выбранному пресету.
+      const isCustomPreset = String(preset) === "custom";
+      setCustomConfigPanelOpen(isCustomPreset);
+
+      // Синхронизируем визуальный "активный" пресет (иногда CSS/логика опирается на is-active).
+      if (configPresetEasyBtnEl) configPresetEasyBtnEl.classList.toggle("is-active", preset === "easy");
+      if (configPresetNormalBtnEl) configPresetNormalBtnEl.classList.toggle("is-active", preset === "normal");
+      if (configPresetHardBtnEl) configPresetHardBtnEl.classList.toggle("is-active", preset === "hard");
+      if (configPresetCustomBtnEl) configPresetCustomBtnEl.classList.toggle("is-active", isCustomPreset);
+      // Для кнопок/ссылок с aria-атрибутами.
+      if (configPresetEasyBtnEl) configPresetEasyBtnEl.setAttribute("aria-pressed", preset === "easy" ? "true" : "false");
+      if (configPresetNormalBtnEl) configPresetNormalBtnEl.setAttribute("aria-pressed", preset === "normal" ? "true" : "false");
+      if (configPresetHardBtnEl) configPresetHardBtnEl.setAttribute("aria-pressed", preset === "hard" ? "true" : "false");
+      if (configPresetCustomBtnEl) configPresetCustomBtnEl.setAttribute("aria-pressed", isCustomPreset ? "true" : "false");
+
+      const presets = {
+
+        easy: {
+          boardSize: 10,
+          playerMaxHp: 130,
+          goldPerMove: 14,
+          inventorySlots: 5,
+          finishers: 1,
+          fortuneCost: 20,
+          blackMarketCost: 22,
+          altarCost: 18,
+          sellFactor: 65,
+          blackMarketMaxLossGold: 20,
+          altarNoTributeMaxPenaltyGold: 8,
+          fortuneGoodChance: 72,
+          blackMarketProfitChance: 62,
+          altarShieldChance: 75
+        },
+        normal: {
+          boardSize: CONFIG.BOARD_SIZE || 10,
+          playerMaxHp: CONFIG.PLAYER_MAX_HP || 100,
+          goldPerMove: CONFIG.GOLD_PER_MOVE || 10,
+          inventorySlots: CONFIG.INVENTORY_SLOT_LIMIT || 4,
+          finishers: CONFIG.FINISHERS_TO_END_GAME || 1,
+          fortuneCost: CONFIG.SERVICE_COSTS?.fortuneTeller || 25,
+          blackMarketCost: CONFIG.SERVICE_COSTS?.blackMarket || 30,
+          altarCost: CONFIG.SERVICE_COSTS?.altar || 25,
+          sellFactor: Math.round((Number(CONFIG.SELL_FACTOR) || 0.5) * 100),
+          blackMarketMaxLossGold: CONFIG.REWARDS?.blackMarketMaxLossGold || 35,
+          altarNoTributeMaxPenaltyGold: CONFIG.REWARDS?.altarNoTributeMaxPenaltyGold || 15,
+          fortuneGoodChance: Math.round((Number(CONFIG.CHANCES?.fortune?.omenGoodChance) || 0.6) * 100),
+          blackMarketProfitChance: Math.round((Number(CONFIG.CHANCES?.blackMarket?.profitMax) || 0.45) * 100),
+          altarShieldChance: Math.round((Number(CONFIG.CHANCES?.altar?.shieldMax) || 0.6) * 100)
+        },
+        hard: {
+          boardSize: 12,
+          playerMaxHp: 85,
+          goldPerMove: 8,
+          inventorySlots: 3,
+          finishers: 2,
+          fortuneCost: 32,
+          blackMarketCost: 45,
+          altarCost: 38,
+          sellFactor: 35,
+          blackMarketMaxLossGold: 55,
+          altarNoTributeMaxPenaltyGold: 25,
+          fortuneGoodChance: 45,
+          blackMarketProfitChance: 30,
+          altarShieldChance: 42
+        }
+      };
+      const selected = presets[preset];
+      if (!selected) return;
+      if (configBoardSizeEl) configBoardSizeEl.value = String(selected.boardSize);
+      if (configPlayerMaxHpEl) configPlayerMaxHpEl.value = String(selected.playerMaxHp);
+      if (configGoldPerMoveEl) configGoldPerMoveEl.value = String(selected.goldPerMove);
+      if (configInventorySlotsEl) configInventorySlotsEl.value = String(selected.inventorySlots);
+      if (configFinishersToEndGameEl) configFinishersToEndGameEl.value = String(selected.finishers);
+      if (configFortuneCostEl) configFortuneCostEl.value = String(selected.fortuneCost);
+      if (configBlackMarketCostEl) configBlackMarketCostEl.value = String(selected.blackMarketCost);
+      if (configAltarCostEl) configAltarCostEl.value = String(selected.altarCost);
+      if (configSellFactorEl) configSellFactorEl.value = String(selected.sellFactor);
+      if (configBlackMarketMaxLossGoldEl) configBlackMarketMaxLossGoldEl.value = String(selected.blackMarketMaxLossGold);
+      if (configAltarNoTributeMaxPenaltyGoldEl) configAltarNoTributeMaxPenaltyGoldEl.value = String(selected.altarNoTributeMaxPenaltyGold);
+      if (configFortuneGoodChanceEl) configFortuneGoodChanceEl.value = String(selected.fortuneGoodChance);
+      if (configBlackMarketProfitChanceEl) configBlackMarketProfitChanceEl.value = String(selected.blackMarketProfitChance);
+      if (configAltarShieldChanceEl) configAltarShieldChanceEl.value = String(selected.altarShieldChance);
+      refreshConfigPreview();
+      syncConfigRangeLabels();
+      setConfigEditorStatus(t("ui.configPresetApplied"), "success");
     }
 
     function shouldSavePlayersBetweenNewGames() {
@@ -2696,6 +2836,7 @@ function rafDebounceSyncScale() {
 
     function animateDiceVisual(roll) {
       if (!diceCubeEl || !diceResultEl) return Promise.resolve();
+      resetPortalDiceVisual();
       const target = DICE_ROTATIONS[roll];
       if (!target) return Promise.resolve();
       const extraX = (Math.floor(Math.random() * 3) + 2) * 360;
@@ -2707,6 +2848,27 @@ function rafDebounceSyncScale() {
       return new Promise((resolve) => {
         setTimeout(() => {
           diceResultEl.textContent = t("ui.diceResultValue", { roll });
+          resolve();
+        }, DICE_ANIMATION_MS);
+      });
+    }
+
+    function resetPortalDiceVisual() {
+      if (diceSceneEl) diceSceneEl.classList.remove("portal-active");
+      if (portalVisualEl) portalVisualEl.setAttribute("aria-hidden", "true");
+    }
+
+    function animatePortalVisual(shift) {
+      if (!diceSceneEl || !diceResultEl) return Promise.resolve();
+      const previousResultText = diceResultEl.textContent;
+      diceSceneEl.classList.remove("portal-active");
+      // Force reflow so portal animation reliably restarts on repeated triggers.
+      void diceSceneEl.offsetWidth;
+      diceSceneEl.classList.add("portal-active");
+      if (portalVisualEl) portalVisualEl.setAttribute("aria-hidden", "false");
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          diceResultEl.textContent = previousResultText || t("ui.diceResultIdle");
           resolve();
         }, DICE_ANIMATION_MS);
       });
@@ -3845,12 +4007,9 @@ function createBoard() {
         });
 
         const shift = randomInt(-5, 5);
-        const from = player.position;
-        const to = clamp(player.position + shift, 1, LAST_CELL);
-        logEvent(`${player.name} tears open an Unstable Portal: shift ${shift >= 0 ? "+" : ""}${shift}. Move: ${from} -> ${to}.`);
-        await movePlayerAnimated(player, to);
-        await resolveCellEffects(player);
-        tickTemporaryEffects(player);
+        pendingPortalShiftByPlayerId.set(player.id, shift);
+        await animatePortalVisual(shift);
+        logEvent(t("ui.unstablePortalPrimed", { name: player.name, shift: `${shift >= 0 ? "+" : ""}${shift}` }));
 
         state.rolling = false;
         markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
@@ -4818,7 +4977,7 @@ function createBoard() {
         if (moved) continue;
 
         if (types.includes("shop")) {
-          logEvent(`${player.name} enters the ${getCellTypeLabel("shop")} ${getCellTypeIcon("shop")}.`);
+          logEvent(`${player.name} enters the Trader shop ${getCellTypeIcon("shop")}.`);
         }
         if (types.includes("blackMarket")) {
           logEvent(t("ui.enterBlackMarket", { name: player.name, icon: getCellTypeIcon("blackMarket") }));
@@ -4840,6 +4999,35 @@ function createBoard() {
     async function rollForSelectedPlayer() {
       const player = selectedPlayer();
       if (!player || state.rolling || state.gameEnded || isPlayerFinished(player)) return;
+      const pendingPortalShift = pendingPortalShiftByPlayerId.get(player.id);
+      if (Number.isInteger(pendingPortalShift)) {
+        state.rolling = true;
+        queueRender({
+          players: true,
+          stats: true,
+          refreshInventoryOverlay: true,
+          refreshContextMenu: true
+        }, {
+          tokenActiveIds: [player.id]
+        });
+        try {
+          await animatePortalVisual(pendingPortalShift);
+          resetPortalDiceVisual();
+          const from = player.position;
+          const target = clamp(player.position + pendingPortalShift, 1, LAST_CELL);
+          logEvent(t("ui.unstablePortalMove", { name: player.name, shift: `${pendingPortalShift >= 0 ? "+" : ""}${pendingPortalShift}`, from, to: target }));
+          await movePlayerAnimated(player, target);
+          await resolveCellEffects(player);
+          tickTemporaryEffects(player);
+          markPlayerDirty(player.id, { row: true, stats: true, context: true, inventoryOverlay: true });
+          pendingPortalShiftByPlayerId.delete(player.id);
+          queueRenderFromDirty({ autosave: true, selectedTile: true, tokenActiveIds: [player.id] });
+        } finally {
+          state.rolling = false;
+          queueRender({ players: true, stats: true, refreshInventoryOverlay: true, refreshContextMenu: true });
+        }
+        return;
+      }
       pushHistory("Roll die");
       state.rolling = true;
       queueRender({
@@ -5078,7 +5266,13 @@ function createBoard() {
         if (isShadowMarket) {
           logEvent(t("ui.blackMarketNotEnoughGold", { cell: player.position, name: player.name, item: getShopItemName(item), price: formatGold(item.price) }));
         } else {
-          logEvent(`${marketLabel} (tile ${player.position}): ${player.name} lacks gold to buy "${getShopItemName(item)}" (${formatGold(item.price)}).`);
+          logEvent(t("ui.shopNotEnoughGold", {
+            shop: getCellTypeLabel("shop"),
+            cell: player.position,
+            name: player.name,
+            item: getShopItemName(item),
+            price: formatGold(item.price)
+          }));
         }
         UIEffects.pulseClass(sourceEl, "shake", 400);
         const goldEl = document.getElementById("shopBuyerGold");
@@ -5550,6 +5744,25 @@ function createBoard() {
       }
       if (resetConfigBtnEl) {
         resetConfigBtnEl.addEventListener("click", resetConfigOverrides);
+      }
+      if (configPresetEasyBtnEl) {
+        configPresetEasyBtnEl.addEventListener("click", () => applyConfigPreset("easy"));
+      }
+      if (configPresetNormalBtnEl) {
+        configPresetNormalBtnEl.addEventListener("click", () => applyConfigPreset("normal"));
+      }
+      if (configPresetHardBtnEl) {
+        configPresetHardBtnEl.addEventListener("click", () => applyConfigPreset("hard"));
+      }
+      if (configPresetCustomBtnEl) {
+        configPresetCustomBtnEl.addEventListener("click", () => setCustomConfigPanelOpen(true));
+      }
+      if (configPresetCustomBtnEl) {
+        // Custom panel visibility is controlled by applyConfigPreset("custom")
+        // to keep UI state and preset state in sync.
+        configPresetCustomBtnEl.addEventListener("click", () => {
+          applyConfigPreset("custom");
+        });
       }
       if (configBoardSizeEl) {
         configBoardSizeEl.addEventListener("input", () => refreshConfigPreview());
